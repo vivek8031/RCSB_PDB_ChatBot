@@ -1,0 +1,64 @@
+{
+  "user_id": "vivek",
+  "session_name": "vivek_main_session",
+  "created_at": "2025-07-29T00:01:37.360159",
+  "chats": [
+    {
+      "chat_id": "caa88a6d-1296-4ef4-8b3c-3996a57e7500",
+      "title": "chat_1",
+      "created_at": "2025-07-29T00:01:56.892253",
+      "updated_at": "2025-07-29T00:12:06.406682",
+      "message_count": 4,
+      "ragflow_session_id": "26d37d1e6c3911f08817567a42eb1655",
+      "messages": [
+        {
+          "role": "user",
+          "content": "How do I deposit a structure to wwPDB?\n\n",
+          "timestamp": "2025-07-29T00:11:32.537507",
+          "references": null
+        },
+        {
+          "role": "assistant",
+          "content": "To deposit a structure to the wwPDB, follow these key steps:\n\n1. **Format and Compile Files**:\n   - Ensure your structure files are in the correct format (PDBx/mmCIF for large structures or .mtz for structure factors).\n   - Gather sequence data, ligand details, and software logs using tools like `pdb_extract` to compile them into the required formats [ID:2] [ID:3].\n\n2. **Access the Deposition Interface**:\n   - Visit the OneDep system at [deposit.wwpdb.org](http://deposit.wwpdb.org) to create a new deposition session.\n   - Log in using ORCiD or a deposition ID/password [ID:6].\n\n3. **Upload Files**:\n   - Use the \"Upload files\" page to select and upload coordinate files (.pdb or .mmCIF) and experimental data files (.mmCIF or .mtz) [ID:4].\n\n4. **Validate Data**:\n   - Review validation reports generated after biocuration and during initial uploads.\n   - Use the diagnostic tools to resolve any file format issues before proceeding [ID:6].\n\n5. **Submit Your Entry**:\n   - Complete all mandatory data fields, indicated by a progress bar that turns into a \"Submit\" button once all information is entered.\n   - Submit your entry, ensuring that all data is accurate and complete [ID:5].\n\nFor any further specific instructions, refer to the wwPDB documentation or contact their support staff.",
+          "timestamp": "2025-07-29T00:11:43.336108",
+          "references": []
+        },
+        {
+          "role": "user",
+          "content": "what's the contact support ?",
+          "timestamp": "2025-07-29T00:12:02.202330",
+          "references": null
+        },
+        {
+          "role": "assistant",
+          "content": "For specific inquiries or support related to depositing structures or any other questions regarding the Protein Data Bank, you can contact the RCSB PDB help desk. For detailed and official guidance, please visit their website at [www.rcsb.org](https://www.rcsb.org) where you can find contact information and additional resources.\n\nIf you have further questions or need direct assistance with deposition or any structural biology queries, their help desk should be your main point of contact.",
+          "timestamp": "2025-07-29T00:12:06.406669",
+          "references": []
+        }
+      ]
+    },
+    {
+      "chat_id": "2eb78dd2-201b-451f-8c73-dbf767316888",
+      "title": "test-2",
+      "created_at": "2025-07-29T00:12:41.249244",
+      "updated_at": "2025-07-29T00:12:59.958120",
+      "message_count": 2,
+      "ragflow_session_id": "a6e4a5c26c3a11f0988d567a42eb1655",
+      "messages": [
+        {
+          "role": "user",
+          "content": "How do I deposit a structure to wwPDB?",
+          "timestamp": "2025-07-29T00:12:47.087217",
+          "references": null
+        },
+        {
+          "role": "assistant",
+          "content": "## Depositing a Structure to wwPDB\n\n### Overview\nDepositing a structure to the Worldwide Protein Data Bank (wwPDB) involves submitting experimentally determined biomolecular structures through an online interface called OneDep. Below are the guidelines for the successful deposition of your structure.\n\n### Steps for Deposition\n\n1. **Determine File Formats**:\n   - Use PDBx/mmCIF format for structures exceeding 99,999 atoms or 62 chains.\n   - For X-ray crystallography submissions, both coordinates and structure factors must be uploaded.\n   - NMR submissions require coordinates, chemical shifts, restraints, and optionally, peak lists.\n   - 3DEM submissions need coordinates, map images, primary maps, and may include additional files.\n\n2. **File Upload**:\n   - Go to the \"Upload files\" page of the deposition interface.\n   - Select the appropriate file type for your coordinate and experimental data files (PDB or mmCIF for coordinates, mmCIF or mtz for structure factors).\n   - Follow any specific instructions provided on the file upload page and continue with the deposition process.\n\n3. **Data Requirements**:\n   - Submit full polymer sequences including any unmodeled residues.\n   - For ligands, ensure they match entries in the Chemical Component Dictionary or submit detailed chemical information if they are new.\n   - If your structure involves symmetry, provide refined chains and necessary symmetry operators.\n\n4. **Validation and Submission**:\n   - Preliminary validation reports are generated upon your initial upload and must be reviewed before submission.\n   - The progress bar will indicate the completion of mandatory data fields, transforming into a \"Submit\" button once everything is complete.\n   - You can revise and validate before final submission.\n\n5. **Finalizing Deposition**:\n   - Upon completion, accession codes such as PDB IDs are automatically assigned.\n   - For experimental methods, raw data should be deposited in curated archives, supplying a DOI during deposition.\n\n6. **Post-Deposition**:\n   - You may update coordinates once per year per entry after its release, affecting up to three entries per Principal Investigator per year.\n   - Experimental data cannot be altered once the entry has been publicly released.\n\nThese steps ensure that your biomolecular structure is deposited effectively and consistently within the wwPDB's guidelines [ID:2] [ID:3] [ID:4]. \n\nFor more detailed information or if you experience issues, refer to the specific guidelines on the wwPDB website or contact the wwPDB help desk.",
+          "timestamp": "2025-07-29T00:12:59.958107",
+          "references": []
+        }
+      ]
+    }
+  ],
+  "total_chats": 2
+}
