@@ -1,0 +1,57 @@
+{
+  "4231eaef-87b8-4c0d-94f1-bcb1a4081550": {
+    "id": "4231eaef-87b8-4c0d-94f1-bcb1a4081550",
+    "title": "How does RAGFlow work?",
+    "created_at": "2025-07-28T22:15:24.184625",
+    "updated_at": "2025-07-28T22:20:03.424112",
+    "messages": [
+      {
+        "role": "user",
+        "content": "How does RAGFlow work?",
+        "timestamp": "2025-07-28T22:15:27.880978"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "timestamp": "2025-07-28T22:15:30.966690",
+        "streaming": true
+      },
+      {
+        "role": "user",
+        "content": "How do I deposit a structure to wwPDB?",
+        "timestamp": "2025-07-28T22:19:53.724766"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "timestamp": "2025-07-28T22:19:56.237778",
+        "streaming": true
+      }
+    ],
+    "session_id": null,
+    "stats": {
+      "total_messages": 2,
+      "successful_queries": 2,
+      "failed_queries": 0
+    }
+  },
+  "1e3023046c3111f09ef2567a42eb1655": {
+    "session_name": "Chat Session 1753761866",
+    "session_id": "1e3023046c3111f09ef2567a42eb1655",
+    "created_at": "2025-07-28T23:05:09.370175",
+    "messages": [
+      {
+        "content": "How do I deposit a structure to wwPDB?",
+        "role": "user",
+        "timestamp": "2025-07-28T23:04:36.493451",
+        "references": null
+      },
+      {
+        "content": "## Overview\n\nDepositing a structure to the Worldwide Protein Data Bank (wwPDB) involves submitting experimental data related to macromolecular structures obtained through methods like X-ray crystallography, NMR, or electron microscopy.\n\n## Steps\n\n### 1. Format Selection\n- **Large Structures:** If your structure exceeds 99,999 atoms or 62 chains, use the PDBx/mmCIF format for coordinates and metadata. This format is designed to handle large entries [ID:2] [ID:5].\n\n### 2. File Upload\n- **File Types:** Ensure you select the correct file types:\n  - **X-ray submissions:** Coordinate file (PDB or mmCIF) and structure factor file (mmCIF or mtz).\n  - **NMR submissions:** Coordinate file, chemical shift file, and at least one restraint file. Optionally, include a peak list file.\n  - **3DEM submissions:** Coordinate file, one map image file, and a primary map file. Optionally, upload additional maps, FSC curves, structure factor data, and layer line data [ID:5].\n\n### 3. Upload Process\n- Navigate to the \"Upload files\" page of the deposition interface.\n- Use the \"browse\" button to select and upload the appropriate files.\n- Follow the detailed instructions on the upload page. After selection, press the \"Continue deposition\" button [ID:3].\n\n### 4. Errors and Re-uploads\n- Check for errors on the diagnostic screen, which appears after file upload.\n- Correct formatting issues (e.g., missing TER cards in PDB files) and re-upload if necessary [ID:2] [ID:3].\n\n### 5. Coordinate Replacement\n- After submission, file replacements can be managed through WW PDB staff.\n- Note: Once entries are released, you can update coordinates once per year per entry under certain conditions, but experimental data cannot be changed [ID:5].\n\n### 6. Validation\n- Validation reports are generated post-biocuration. Preliminary reports are available upon initial file upload. Review these reports before final submission [ID:5].\n\n### 7. Submission Completion\n- Completion of mandatory data is indicated by a progress bar that turns into a \"Submit\" button once all required data is entered. Ensure all details, including funding agency and assembly specifics, are clearly provided [ID:5].\n\nEnsure that all steps comply with wwPDB's guidelines and that you provide detailed information about your experimental data and structural models as required.",
+        "role": "assistant",
+        "timestamp": "2025-07-28T23:04:48.483385",
+        "references": []
+      }
+    ]
+  }
+}
