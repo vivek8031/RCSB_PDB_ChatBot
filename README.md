@@ -30,17 +30,47 @@ An intelligent, multi-user research assistant for protein structures, crystallog
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### Local Development
+
+#### 1. Install Dependencies
 ```bash
-pip install streamlit ragflow-sdk
+pip install -r requirements.txt
 ```
 
-### 2. Run the Application
+#### 2. Configure Environment
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit .env with your RAGFlow configuration
+RAGFLOW_API_KEY=your_api_key_here
+RAGFLOW_BASE_URL=http://127.0.0.1:9380
+RAGFLOW_ASSISTANT_NAME=RCSB ChatBot v2
+DEBUG_MODE=true
+```
+
+#### 3. Run the Application
 ```bash
 streamlit run rcsb_pdb_chatbot.py
 ```
 
-### 3. Use the Interface
+### Production Deployment
+
+For production deployment with Docker, see our comprehensive guides:
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+
+#### Quick Production Setup
+```bash
+# Build and deploy with Docker Compose
+docker-compose build
+docker-compose up -d
+
+# Access application
+curl http://localhost:3002/_stcore/health
+```
+
+### 🖥️ Using the Interface
 1. **Start a research session** with your research ID (e.g., "alice", "lab_researcher_123")
 2. **Create a new chat** with a descriptive title for your research topic
 3. **Ask questions** about RCSB PDB, protein structures, crystallography, etc.
@@ -50,15 +80,23 @@ streamlit run rcsb_pdb_chatbot.py
 ## 📁 Project Structure
 
 ```
-📦 chatbot_ui_v2/
+📦 RCSB_PDB_ChatBot/
 ├── 🧬 rcsb_pdb_chatbot.py           # Main Streamlit research application
-├── 🔧 user_session_manager.py       # User & session management system
+├── 🔧 user_session_manager.py       # User & session management system  
 ├── 🤖 ragflow_simple_client.py      # RAGFlow SDK wrapper
+├── 📋 requirements.txt              # Python dependencies
+├── 🐳 Dockerfile                    # Production container configuration
+├── 🐳 docker-compose.yml           # Container orchestration
+├── 🚀 deploy.sh                    # Automated deployment script
+├── ⚙️ .env                         # Environment variables (production)
+├── ⚙️ .env.example                 # Environment configuration template
 ├── 📊 user_data/                    # Research session data storage
 │   ├── user_alice_sessions.json
 │   ├── user_researcher_sessions.json
 │   └── user_[research_id]_sessions.json
-└── 📚 README.md                     # This documentation
+├── 📚 README.md                     # Project overview
+├── 📖 DEPLOYMENT.md                 # Complete deployment guide
+└── 🔧 TROUBLESHOOTING.md           # Common issues and solutions
 ```
 
 ## 🔬 Research Session Architecture
@@ -170,12 +208,33 @@ Research Sessions:              Research Sessions:
 
 ## 📋 System Requirements
 
-- **Python:** 3.8+
+### Development Environment
+- **Python:** 3.10+
 - **Streamlit:** 1.28.0+
 - **RAGFlow SDK:** 0.19.0+
-- **RAGFlow Server:** Running locally on port 9380
+- **RAGFlow Server:** Running on port 9380
+
+### Production Environment
+- **Docker:** 20.10+
+- **Docker Compose:** 2.0+
+- **Ubuntu:** 20.04+ (recommended)
+- **Memory:** 2GB+ available
+- **Storage:** 5GB+ free space
+- **Ports:** 3002 available for application
 
 ## 🎉 What's New
+
+### **✅ Production-Ready Deployment**
+- Complete Docker containerization with multi-stage builds
+- HAProxy integration support on port 3002
+- Automated deployment scripts and comprehensive documentation
+- Health checks and monitoring support
+
+### **✅ Enhanced Markdown Processing**
+- Streamlined markdown rendering using Streamlit's built-in capabilities
+- Support for ```markdown code block processing
+- Clean UI without external dependencies
+- Optimized for assistant-generated structured responses
 
 ### **✅ Secure Multi-User Architecture**
 - Complete user isolation with individual data storage
@@ -209,6 +268,22 @@ The system is pre-configured for the RCSB PDB environment:
 
 ---
 
+## 📚 Documentation
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete step-by-step deployment guide
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+- **[README.md](README.md)** - This project overview
+
+## 🔗 Quick Links
+
+- **Repository:** [https://github.com/vivek8031/RCSB_PDB_ChatBot](https://github.com/vivek8031/RCSB_PDB_ChatBot) (Private)
+- **Production URL:** http://YOUR_SERVER_IP (via HAProxy)
+- **Health Check:** http://YOUR_SERVER_IP:3002/_stcore/health
+
+---
+
 **🔐 Security Notice:** This system provides complete user isolation and is safe for multi-user deployment. Each user's conversations are private and cannot be accessed by others.
 
-**🚀 Ready to Use:** Simply run `streamlit run rcsb_pdb_chatbot.py` and start researching!
+**🚀 Ready to Use:** 
+- **Development:** `streamlit run rcsb_pdb_chatbot.py`
+- **Production:** `docker-compose up -d`
