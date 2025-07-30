@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  rcsb-pdb-chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rcsb_pdb_chatbot
+    ports:
+      - "3002:3002"  # Map to port 3002 for HAProxy integration
+    env_file:
+      - .env  # Use existing .env file with production values
+    volumes:
+      - ./user_data:/app/user_data  # Persist user session data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3002/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    environment:
+      - PYTHONUNBUFFERED=1
+      - STREAMLIT_SERVER_PORT=3002
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    networks:
+      - rcsb-network
+
+networks:
+  rcsb-network:
+    driver: bridge
+
+volumes:
+  user_data:
+    driver: local
