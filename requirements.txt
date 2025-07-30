@@ -1,4 +1,4 @@
-# Secure RAGFlow Multi-User ChatBot Requirements
+# RCSB PDB Multi-User Research ChatBot Requirements
 
 # Core Dependencies
 streamlit>=1.28.0
