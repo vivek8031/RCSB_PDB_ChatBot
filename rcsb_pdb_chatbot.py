@@ -6,10 +6,39 @@ A professional Streamlit interface for protein structure research and PDB data q
 
 import streamlit as st
 import time
+import os
+import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+# Using Streamlit's built-in st.markdown for all markdown processing
+
 from user_session_manager import UserSessionManager, UserChat, create_manager
+
+
+def process_markdown_response(content: str) -> str:
+    """
+    Extract markdown content from code blocks if wrapped in ```markdown blocks
+    
+    Args:
+        content: The response content, potentially wrapped in ```markdown blocks
+        
+    Returns:
+        Extracted markdown content ready for st.markdown() display
+    """
+    if not content:
+        return content
+    
+    # Check if content is wrapped in markdown code blocks
+    markdown_pattern = r'^```markdown\s*\n(.*?)\n```$'
+    match = re.match(markdown_pattern, content.strip(), re.DOTALL)
+    
+    if match:
+        # Extract and return the markdown content
+        return match.group(1)
+    
+    # If not wrapped in code blocks, return as-is
+    return content
 
 
 def init_session_state():
@@ -278,7 +307,11 @@ def display_main_interface():
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.write(message["content"])
+            # Process and render markdown content properly
+            processed_content = process_markdown_response(message["content"])
+            
+            # Use Streamlit's built-in markdown rendering
+            st.markdown(processed_content)
             
             # Show references if available and enabled
             if (message["role"] == "assistant" and 
@@ -316,7 +349,12 @@ def display_main_interface():
                     # Update the message as it streams
                     if response_chunk.content != full_response:
                         full_response = response_chunk.content
-                        message_placeholder.write(full_response)
+                        
+                        # Process and render markdown content during streaming
+                        processed_content = process_markdown_response(full_response)
+                        
+                        # Use Streamlit's built-in markdown rendering
+                        message_placeholder.markdown(processed_content)
                     
                     # Capture references from the final response
                     if response_chunk.references:
@@ -352,12 +390,16 @@ def sidebar_settings():
     
     st.sidebar.markdown("### ⚙️ Settings")
     
-    # References toggle
-    st.session_state.show_references = st.sidebar.checkbox(
-        "📚 Show References",
-        value=st.session_state.show_references,
-        help="Display source documents and similarity scores"
-    )
+    # References toggle (only show in debug mode)
+    if os.getenv("DEBUG_MODE", "false").lower() == "true":
+        st.session_state.show_references = st.sidebar.checkbox(
+            "📚 Show References",
+            value=st.session_state.show_references,
+            help="Display source documents and similarity scores"
+        )
+    else:
+        # In production mode, keep references disabled
+        st.session_state.show_references = False
     
     # Export functionality
     if st.sidebar.button("📤 Export Current Chat"):
