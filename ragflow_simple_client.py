@@ -4,6 +4,7 @@ A clean wrapper around the RAGFlow SDK for the 'RCSB ChatBot v2' assistant
 """
 
 import os
+import re
 import time
 from typing import Dict, List, Optional, Any, Generator, Tuple
 from dataclasses import dataclass
@@ -45,6 +46,43 @@ class ChatSession:
     chat_id: str
     created_at: datetime
     messages: List[ChatMessage]
+
+
+def extract_reference_ids_from_content(content: str) -> List[Dict[str, Any]]:
+    """
+    Extract [ID:X] reference markers from content and convert to reference objects
+    
+    Args:
+        content: The response content containing [ID:X] markers
+        
+    Returns:
+        List of reference dictionaries with basic info
+    """
+    if not content:
+        return []
+    
+    # Find all [ID:X] patterns in the content
+    id_pattern = r'\[ID:(\d+)\]'
+    matches = re.findall(id_pattern, content)
+    
+    if not matches:
+        return []
+    
+    # Convert to unique reference objects
+    unique_ids = list(set(matches))  # Remove duplicates
+    references = []
+    
+    for ref_id in sorted(unique_ids, key=int):  # Sort numerically
+        references.append({
+            'id': f'ref_{ref_id}',
+            'document_name': f'Knowledge Base Reference {ref_id}',
+            'similarity': 1.0,  # We don't have actual similarity scores
+            'content': f'Referenced content from knowledge base source ID:{ref_id}',
+            'doc_type': 'knowledge_base',
+            'reference_id': ref_id
+        })
+    
+    return references
 
 
 class RAGFlowSimpleClient:
@@ -260,13 +298,18 @@ class RAGFlowSimpleClient:
                     if new_content:
                         full_content = chunk.content
                         
+                        # Extract references from content if not already present
+                        references = getattr(chunk, 'reference', None)
+                        if not references and chunk.content:
+                            references = extract_reference_ids_from_content(chunk.content)
+                        
                         # Create message object
                         chat_msg = ChatMessage(
                             content=chunk.content,
                             role='assistant',
                             timestamp=datetime.now(),
                             message_id=getattr(chunk, 'id', None),
-                            references=getattr(chunk, 'reference', None)
+                            references=references if references else None
                         )
                         
                         yield chat_msg
@@ -277,12 +320,17 @@ class RAGFlowSimpleClient:
                     final_response = response
                 
                 if final_response:
+                    # Extract references from content if not already present
+                    references = getattr(final_response, 'reference', None)
+                    if not references and final_response.content:
+                        references = extract_reference_ids_from_content(final_response.content)
+                    
                     chat_msg = ChatMessage(
                         content=final_response.content,
                         role='assistant',
                         timestamp=datetime.now(),
                         message_id=getattr(final_response, 'id', None),
-                        references=getattr(final_response, 'reference', None)
+                        references=references if references else None
                     )
                     yield chat_msg
                     
@@ -351,6 +399,10 @@ class RAGFlowSimpleClient:
                             # Get final content if available
                             if hasattr(choice.delta, 'final_content'):
                                 full_content = choice.delta.final_content
+                            
+                            # Extract references from final complete content
+                            if not references and full_content:
+                                references = extract_reference_ids_from_content(full_content)
                         
                         # Yield the current state
                         chat_msg = ChatMessage(
@@ -368,12 +420,16 @@ class RAGFlowSimpleClient:
                     content = choice.message.content
                     references = getattr(choice.message, 'reference', None)
                     
+                    # Extract references from content if not already present
+                    if not references and content:
+                        references = extract_reference_ids_from_content(content)
+                    
                     chat_msg = ChatMessage(
                         content=content,
                         role='assistant',
                         timestamp=datetime.now(),
                         message_id=getattr(completion, 'id', None),
-                        references=references
+                        references=references if references else None
                     )
                     yield chat_msg
                     
