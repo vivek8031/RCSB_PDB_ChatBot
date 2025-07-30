@@ -1,14 +1,14 @@
-# 🔐 Secure RAGFlow Multi-User ChatBot
+# 🧬 RCSB PDB ChatBot
 
-A secure, multi-user Streamlit interface for RAGFlow with proper user isolation and conversation persistence.
+An intelligent, multi-user research assistant for protein structures, crystallography, and structural biology data with complete conversation persistence.
 
 ## 🎯 Features
 
-### ✅ **User Isolation & Security**
-- **Complete user separation** - Users cannot access each other's chats
-- **Individual data storage** - Each user gets their own data file
-- **Session validation** - System validates chat ownership before access
-- **No cross-user data leakage** - Tested and verified secure architecture
+### ✅ **Multi-User Research Environment**
+- **Individual research sessions** - Each researcher has their own workspace
+- **Private conversation history** - Personal data storage for each user
+- **Secure access control** - Research sessions are completely isolated
+- **Professional deployment ready** - Tested and verified for research teams
 
 ### ✅ **Multi-Chat Management**
 - **Multiple chats per user** - Organize conversations by topic
@@ -37,50 +37,50 @@ pip install streamlit ragflow-sdk
 
 ### 2. Run the Application
 ```bash
-streamlit run secure_ragflow_ui.py
+streamlit run rcsb_pdb_chatbot.py
 ```
 
 ### 3. Use the Interface
-1. **Login** with your user ID (e.g., "alice", "researcher_123")
-2. **Create a chat** with a descriptive title
-3. **Start chatting** about RCSB PDB, protein structures, etc.
-4. **Switch between chats** to organize different topics
-5. **Your conversations are automatically saved!**
+1. **Start a research session** with your research ID (e.g., "alice", "lab_researcher_123")
+2. **Create a new chat** with a descriptive title for your research topic
+3. **Ask questions** about RCSB PDB, protein structures, crystallography, etc.
+4. **Organize research topics** in separate chats for better organization
+5. **All conversations are automatically saved** for future reference
 
 ## 📁 Project Structure
 
 ```
 📦 chatbot_ui_v2/
-├── 🎯 secure_ragflow_ui.py          # Main Streamlit application
+├── 🧬 rcsb_pdb_chatbot.py           # Main Streamlit research application
 ├── 🔧 user_session_manager.py       # User & session management system
 ├── 🤖 ragflow_simple_client.py      # RAGFlow SDK wrapper
-├── 📊 user_data/                    # User-specific data storage
+├── 📊 user_data/                    # Research session data storage
 │   ├── user_alice_sessions.json
-│   ├── user_bob_sessions.json
-│   └── user_[id]_sessions.json
+│   ├── user_researcher_sessions.json
+│   └── user_[research_id]_sessions.json
 └── 📚 README.md                     # This documentation
 ```
 
-## 🔒 Security Architecture
+## 🔬 Research Session Architecture
 
-### **User Isolation Model:**
+### **Multi-Researcher Model:**
 ```
-User "alice"                    User "bob"
+Researcher "alice"              Researcher "bob"
 ├── 💬 Chat: "Protein Research"  ├── 💬 Chat: "NMR Studies"
 ├── 💬 Chat: "Data Analysis"     └── 💬 Chat: "Crystallography"
 └── 💬 Chat: "PDB Questions"     
      ↓                               ↓
-RAGFlow Sessions:               RAGFlow Sessions:
+Research Sessions:              Research Sessions:
 ├── alice_Protein_Research_...  ├── bob_NMR_Studies_...
 ├── alice_Data_Analysis_...     └── bob_Crystallography_...
 └── alice_PDB_Questions_...
 ```
 
-### **Data Separation:**
-- **Individual JSON files** per user in `user_data/` directory
-- **Unique RAGFlow sessions** prefixed with user ID
-- **No shared storage** between users
-- **Session ownership validation** before any access
+### **Research Data Organization:**
+- **Individual JSON files** per researcher in `user_data/` directory
+- **Unique research sessions** prefixed with researcher ID
+- **Private workspace** for each researcher
+- **Automatic session validation** for data integrity
 
 ## 🛠️ Technical Details
 
@@ -92,11 +92,11 @@ RAGFlow Sessions:               RAGFlow Sessions:
 - Provides chat lifecycle management (create, delete, clear)
 - Ensures data isolation between users
 
-#### **2. Secure UI (`secure_ragflow_ui.py`)**
-- Streamlit-based web interface
-- User authentication with login/logout
-- Multi-chat interface with message persistence
-- Settings panel with export and reference controls
+#### **2. Research Interface (`rcsb_pdb_chatbot.py`)**
+- Professional Streamlit-based web interface
+- Research session management with start/end functionality
+- Multi-chat interface with complete message persistence
+- Research tools including export and reference controls
 
 #### **3. RAGFlow Client (`ragflow_simple_client.py`)**
 - Simplified wrapper around RAGFlow SDK
@@ -211,4 +211,4 @@ The system is pre-configured for the RCSB PDB environment:
 
 **🔐 Security Notice:** This system provides complete user isolation and is safe for multi-user deployment. Each user's conversations are private and cannot be accessed by others.
 
-**🚀 Ready to Use:** Simply run `streamlit run secure_ragflow_ui.py` and start chatting!
+**🚀 Ready to Use:** Simply run `streamlit run rcsb_pdb_chatbot.py` and start researching!

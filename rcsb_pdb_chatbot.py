@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Secure RAGFlow ChatBot UI with User Session Management
-A secure Streamlit interface with proper user isolation
+RCSB PDB ChatBot - Intelligent Assistant for Structural Biology
+A professional Streamlit interface for protein structure research and PDB data queries
 """
 
 import streamlit as st
@@ -84,12 +84,12 @@ def user_authentication():
             st.session_state.messages = []
             st.rerun()
         else:
-            st.sidebar.error("Please enter a valid User ID")
+            st.sidebar.error("Please enter a research ID")
     
     if st.session_state.current_user_id:
-        st.sidebar.success(f"✅ Logged in as: **{st.session_state.current_user_id}**")
+        st.sidebar.success(f"✅ Research session: **{st.session_state.current_user_id}**")
         
-        if st.sidebar.button("🚪 Logout"):
+        if st.sidebar.button("📚 End Session"):
             st.session_state.current_user_id = None
             st.session_state.current_chat_id = None
             st.session_state.messages = []
@@ -218,26 +218,28 @@ def display_main_interface():
     """Display the main chat interface"""
     if not st.session_state.current_user_id:
         st.markdown("""
-        # 🔐 Secure RAGFlow ChatBot
+        # 🧬 RCSB PDB ChatBot
         
-        Welcome to the secure RCSB PDB ChatBot! This interface provides proper user isolation 
-        to ensure your conversations remain private.
+        Your intelligent assistant for protein structures, crystallography, and structural biology data.
         
         ## 🚀 Getting Started
-        1. **Enter your User ID** in the sidebar to login
-        2. **Create a new chat** for your questions
-        3. **Start chatting** about protein structures, PDB data, and more!
+        1. **Enter your User ID** in the sidebar to get started
+        2. **Create a new chat** with a descriptive title for your research topic
+        3. **Ask questions** about protein structures, PDB data, crystallography, and more!
         
-        ## 🔒 Security Features
-        - ✅ **User Isolation**: Your chats are completely separate from other users
-        - ✅ **Private Sessions**: Each chat gets its own secure session
-        - ✅ **Data Separation**: Your data is stored separately from other users
-        - ✅ **Session Security**: No cross-user access or data leakage
+        ## 🔬 What You Can Ask About
+        - **Protein Data Bank (PDB)** structures and entries
+        - **Crystallography** and structure determination methods
+        - **Molecular biology** and protein science concepts
+        - **Data analysis** and structural bioinformatics
+        - **Structure deposition** and validation processes
+        - **wwPDB policies** and procedures
         
-        ## 💡 Tips
-        - Use descriptive chat titles like "Protein Analysis" or "Structure Questions"
-        - Create separate chats for different topics or projects
-        - Your chats are automatically saved and can be resumed anytime
+        ## 💡 Tips for Better Results
+        - Use descriptive chat titles like "Protein Analysis Project" or "Crystal Structure Questions"
+        - Create separate chats for different research topics or projects
+        - Be specific in your questions for more accurate responses
+        - Your conversations are automatically saved for future reference
         """)
         return
     
@@ -397,8 +399,8 @@ def main():
     """Main application function"""
     # Page configuration
     st.set_page_config(
-        page_title="Secure RAGFlow ChatBot",
-        page_icon="🔐",
+        page_title="RCSB PDB ChatBot",
+        page_icon="🧬",
         layout="wide",
         initial_sidebar_state="expanded"
     )
@@ -437,31 +439,10 @@ def main():
         current_chat = chat_management()
         sidebar_settings()
         
-        # Admin section (if needed)
-        if st.sidebar.checkbox("🔧 Admin Mode", help="Show administrative options"):
-            st.sidebar.markdown("### 🛠️ Admin Tools")
-            
-            all_users = st.session_state.session_manager.list_all_users()
-            st.sidebar.info(f"Total users: {len(all_users)}")
-            
-            if st.sidebar.button("🧹 Cleanup Test Data", help="Remove test users"):
-                test_users = ["alice", "bob", "charlie"]
-                for user in test_users:
-                    if user in all_users:
-                        st.session_state.session_manager.cleanup_user_data(user)
-                st.sidebar.success("Cleaned up test data")
     
     # Main interface
     display_main_interface()
     
-    # Footer
-    if is_authenticated:
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("""
-        ### 🔒 Security Notice
-        Your conversations are private and isolated from other users. 
-        Each chat creates a separate secure session.
-        """)
 
 
 if __name__ == "__main__":
