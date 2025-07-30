@@ -7,7 +7,7 @@ set -e  # Exit on any error
 
 # Configuration
 PROD_SERVER="ubuntu@128.6.158.52"
-REPO_URL="https://github.com/vivek8031/RCSB_PDB_ChatBot.git"
+REPO_URL="git@github.com:vivek8031/RCSB_PDB_ChatBot.git"
 APP_DIR="/home/ubuntu/RCSB_PDB_ChatBot"
 CONTAINER_NAME="rcsb_pdb_chatbot"
 

@@ -1,7 +1,7 @@
 # RCSB PDB ChatBot Production Dockerfile
 # Multi-stage build for optimized production deployment
 
-FROM python:3.9-slim as builder
+FROM python:3.10-slim as builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Production stage
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 # Set working directory (required for Streamlit 1.10.0+)
 WORKDIR /app
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean
 
 # Copy Python packages from builder stage
-COPY --from=builder /usr/local/lib/python3.9/site-packages/ /usr/local/lib/python3.9/site-packages/
+COPY --from=builder /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy application code
