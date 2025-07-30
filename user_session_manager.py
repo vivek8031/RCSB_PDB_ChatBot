@@ -5,12 +5,19 @@ Provides user-specific session management with multiple chats per user
 """
 
 import json
+import os
 import time
 import uuid
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load environment variables from .env file
+except ImportError:
+    print("Warning: python-dotenv not installed. Environment variables from .env file won't be loaded.")
 
 from ragflow_simple_client import RAGFlowSimpleClient, ChatSession, ChatMessage
 
@@ -394,11 +401,16 @@ class UserSessionManager:
 
 
 def create_manager() -> UserSessionManager:
-    """Create a UserSessionManager with default settings"""
-    API_KEY = "ragflow-VjNjM4Zjk0NmMyZDExZjA4MjQyNTY3YT"
-    BASE_URL = "http://127.0.0.1:9380"
+    """Create a UserSessionManager with environment-based configuration"""
+    # Load configuration from environment variables with fallback defaults
+    API_KEY = os.getenv("RAGFLOW_API_KEY", "ragflow-VjNjM4Zjk0NmMyZDExZjA4MjQyNTY3YT")
+    BASE_URL = os.getenv("RAGFLOW_BASE_URL", "http://127.0.0.1:9380")
+    DATA_DIR = os.getenv("USER_DATA_DIR", "user_data")
     
-    return UserSessionManager(api_key=API_KEY, base_url=BASE_URL)
+    if not API_KEY or API_KEY == "your_api_key_here":
+        raise ValueError("RAGFLOW_API_KEY environment variable must be set with a valid API key")
+    
+    return UserSessionManager(api_key=API_KEY, base_url=BASE_URL, data_dir=DATA_DIR)
 
 
 # Example usage and testing

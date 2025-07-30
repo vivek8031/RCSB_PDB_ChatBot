@@ -3,10 +3,17 @@ Simplified RAGFlow Client
 A clean wrapper around the RAGFlow SDK for the 'RCSB ChatBot v2' assistant
 """
 
+import os
 import time
 from typing import Dict, List, Optional, Any, Generator, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load environment variables from .env file
+except ImportError:
+    pass  # python-dotenv not installed, environment variables from .env file won't be loaded
 
 try:
     from ragflow_sdk import RAGFlow
@@ -53,7 +60,7 @@ class RAGFlowSimpleClient:
         """
         self.api_key = api_key
         self.base_url = base_url
-        self.assistant_name = "RCSB ChatBot v2"
+        self.assistant_name = os.getenv("RAGFLOW_ASSISTANT_NAME", "RCSB ChatBot v2")
         
         # Initialize clients
         try:
