@@ -13,6 +13,12 @@ try:
 except ImportError:
     raise ImportError("RAGFlow SDK not installed. Run: pip install ragflow-sdk")
 
+try:
+    from openai import OpenAI
+except ImportError:
+    print("Warning: OpenAI library not installed. OpenAI-compatible API will not be available.")
+    OpenAI = None
+
 
 @dataclass
 class ChatMessage:
@@ -49,11 +55,18 @@ class RAGFlowSimpleClient:
         self.base_url = base_url
         self.assistant_name = "RCSB ChatBot v2"
         
-        # Initialize client
+        # Initialize clients
         try:
             self.rag_client = RAGFlow(api_key=api_key, base_url=base_url)
             self.assistant = None
             self._find_assistant()
+            
+            # Initialize OpenAI client for alternative API access
+            if OpenAI:
+                self.openai_client = None  # Will be initialized per-session
+            else:
+                self.openai_client = None
+                
         except Exception as e:
             raise ConnectionError(f"Failed to initialize RAGFlow client: {e}")
     
@@ -179,7 +192,7 @@ class RAGFlowSimpleClient:
             print(f"Warning: Failed to delete session {session_id}: {e}")
             return False
     
-    def send_message(self, session_id: str, message: str, stream: bool = True) -> Generator[ChatMessage, None, None]:
+    def send_message(self, session_id: str, message: str, stream: bool = True, use_openai_api: bool = True, **kwargs) -> Generator[ChatMessage, None, None]:
         """
         Send a message and get response
         
@@ -187,6 +200,8 @@ class RAGFlowSimpleClient:
             session_id: Session ID to send message to
             message: User message content
             stream: Whether to stream the response
+            use_openai_api: Whether to use OpenAI-compatible API (recommended for references)
+            **kwargs: Additional parameters passed to session.ask()
             
         Yields:
             ChatMessage objects for the response
@@ -194,7 +209,18 @@ class RAGFlowSimpleClient:
         if not self.assistant:
             raise ValueError("Assistant not found")
         
+        # Try OpenAI API first if available and requested
+        if use_openai_api and OpenAI:
+            try:
+                for response in self.send_message_openai_api(session_id, message, stream):
+                    yield response
+                return
+            except Exception as e:
+                print(f"Warning: OpenAI API failed, falling back to SDK: {e}")
+                # Fall through to SDK method
+        
         try:
+            # Fallback: Use the SDK method
             # Get the session object - we need to recreate it
             sessions = self.assistant.list_sessions()
             target_session = None
@@ -207,8 +233,17 @@ class RAGFlowSimpleClient:
             if not target_session:
                 raise ValueError(f"Session {session_id} not found")
             
-            # Send message and handle response
-            response_generator = target_session.ask(question=message, stream=stream)
+            # Send message and handle response with all parameters
+            # Try multiple parameter combinations to ensure references work
+            ask_params = {
+                'question': message,
+                'stream': stream,
+                'reference': True,
+                'show_quote': True,
+                **kwargs  # Include any additional parameters
+            }
+            
+            response_generator = target_session.ask(**ask_params)
             
             if stream:
                 # Handle streaming response
@@ -248,6 +283,97 @@ class RAGFlowSimpleClient:
             # Return error message
             error_msg = ChatMessage(
                 content=f"Error: {str(e)}",
+                role='assistant',
+                timestamp=datetime.now()
+            )
+            yield error_msg
+    
+    def send_message_openai_api(self, session_id: str, message: str, stream: bool = True) -> Generator[ChatMessage, None, None]:
+        """
+        Send a message using OpenAI-compatible API with references enabled
+        
+        Args:
+            session_id: Session ID to send message to
+            message: User message content
+            stream: Whether to stream the response
+            
+        Yields:
+            ChatMessage objects for the response
+        """
+        if not self.assistant:
+            raise ValueError("Assistant not found")
+        
+        if not OpenAI:
+            raise ImportError("OpenAI library not installed. Cannot use OpenAI-compatible API.")
+        
+        try:
+            # Create OpenAI client for this session
+            openai_client = OpenAI(
+                api_key=self.api_key,
+                base_url=f"{self.base_url}/api/v1/chats_openai/{self.assistant.id}"
+            )
+            
+            # Create chat completion with references enabled
+            completion = openai_client.chat.completions.create(
+                model="ragflow-model",  # Can be any value according to docs
+                messages=[
+                    {"role": "user", "content": message}
+                ],
+                stream=stream,
+                extra_body={"reference": True}
+            )
+            
+            if stream:
+                # Handle streaming response
+                full_content = ""
+                references = []
+                
+                for chunk in completion:
+                    if chunk.choices and len(chunk.choices) > 0:
+                        choice = chunk.choices[0]
+                        
+                        # Get content delta
+                        if hasattr(choice, 'delta') and hasattr(choice.delta, 'content') and choice.delta.content:
+                            full_content += choice.delta.content
+                        
+                        # Check for references when streaming finishes
+                        if choice.finish_reason == "stop":
+                            if hasattr(choice.delta, 'reference'):
+                                references = choice.delta.reference
+                            
+                            # Get final content if available
+                            if hasattr(choice.delta, 'final_content'):
+                                full_content = choice.delta.final_content
+                        
+                        # Yield the current state
+                        chat_msg = ChatMessage(
+                            content=full_content,
+                            role='assistant',
+                            timestamp=datetime.now(),
+                            message_id=getattr(chunk, 'id', None),
+                            references=references if references else None
+                        )
+                        yield chat_msg
+            else:
+                # Handle non-streaming response
+                if completion.choices and len(completion.choices) > 0:
+                    choice = completion.choices[0]
+                    content = choice.message.content
+                    references = getattr(choice.message, 'reference', None)
+                    
+                    chat_msg = ChatMessage(
+                        content=content,
+                        role='assistant',
+                        timestamp=datetime.now(),
+                        message_id=getattr(completion, 'id', None),
+                        references=references
+                    )
+                    yield chat_msg
+                    
+        except Exception as e:
+            # Return error message
+            error_msg = ChatMessage(
+                content=f"OpenAI API Error: {str(e)}",
                 role='assistant',
                 timestamp=datetime.now()
             )
