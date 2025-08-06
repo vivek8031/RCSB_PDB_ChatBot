@@ -56,11 +56,24 @@ streamlit run rcsb_pdb_chatbot.py
 
 ### Production Deployment
 
-For production deployment with Docker, see our comprehensive guides:
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+**🎯 Recommended: Git-Based Deployment**
 
-#### Quick Production Setup
+For simple and efficient production deployment using Git:
+- **[GIT-DEPLOYMENT.md](GIT-DEPLOYMENT.md)** - **⭐ New Git-based deployment guide**
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Legacy zip-based deployment guide
+
+#### Quick Production Setup (Git-Based)
+```bash
+# Initial deployment (one-time setup)
+./deploy-git.sh
+
+# Future updates (after making changes)
+git push origin main
+./update-production.sh
+```
+
+#### Alternative: Manual Docker Setup
 ```bash
 # Build and deploy with Docker Compose
 docker-compose build
@@ -87,7 +100,9 @@ curl http://localhost:3002/_stcore/health
 ├── 📋 requirements.txt              # Python dependencies
 ├── 🐳 Dockerfile                    # Production container configuration
 ├── 🐳 docker-compose.yml           # Container orchestration
-├── 🚀 deploy.sh                    # Automated deployment script
+├── 🚀 deploy-git.sh                # Git-based deployment script (recommended)
+├── 🔄 update-production.sh         # Quick production update script
+├── 🚀 deploy.sh                    # Legacy deployment script
 ├── ⚙️ .env                         # Environment variables (production)
 ├── ⚙️ .env.example                 # Environment configuration template
 ├── 📊 user_data/                    # Research session data storage
@@ -95,7 +110,8 @@ curl http://localhost:3002/_stcore/health
 │   ├── user_researcher_sessions.json
 │   └── user_[research_id]_sessions.json
 ├── 📚 README.md                     # Project overview
-├── 📖 DEPLOYMENT.md                 # Complete deployment guide
+├── 📖 GIT-DEPLOYMENT.md             # ⭐ Git-based deployment guide (recommended)
+├── 📖 DEPLOYMENT.md                 # Legacy zip-based deployment guide
 └── 🔧 TROUBLESHOOTING.md           # Common issues and solutions
 ```
 
@@ -225,10 +241,11 @@ Research Sessions:              Research Sessions:
 ## 🎉 What's New
 
 ### **✅ Production-Ready Deployment**
-- Complete Docker containerization with multi-stage builds
-- HAProxy integration support on port 3002
-- Automated deployment scripts and comprehensive documentation
-- Health checks and monitoring support
+- **Git-based deployment**: Simple push-to-deploy workflow
+- **Legacy zip deployment**: Complete Docker containerization
+- **HAProxy integration**: Support on port 3002
+- **Automated scripts**: One-command deployment and updates
+- **Health checks**: Built-in monitoring and verification
 
 ### **✅ Enhanced Markdown Processing**
 - Streamlined markdown rendering using Streamlit's built-in capabilities
@@ -270,13 +287,14 @@ The system is pre-configured for the RCSB PDB environment:
 
 ## 📚 Documentation
 
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete step-by-step deployment guide
+- **[GIT-DEPLOYMENT.md](GIT-DEPLOYMENT.md)** - ⭐ **Recommended Git-based deployment guide**
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Legacy zip-based deployment guide
 - **[README.md](README.md)** - This project overview
 
 ## 🔗 Quick Links
 
-- **Repository:** [https://github.com/vivek8031/RCSB_PDB_ChatBot](https://github.com/vivek8031/RCSB_PDB_ChatBot) (Private)
+- **Repository:** [https://github.com/vivek8031/RCSB_PDB_ChatBot](https://github.com/vivek8031/RCSB_PDB_ChatBot) ⭐ **Now Public**
 - **Production URL:** http://YOUR_SERVER_IP (via HAProxy)
 - **Health Check:** http://YOUR_SERVER_IP:3002/_stcore/health
 
@@ -286,4 +304,5 @@ The system is pre-configured for the RCSB PDB environment:
 
 **🚀 Ready to Use:** 
 - **Development:** `streamlit run rcsb_pdb_chatbot.py`
-- **Production:** `docker-compose up -d`
+- **Production (Git-based):** `./deploy-git.sh` then `./update-production.sh` for updates
+- **Production (Manual):** `docker-compose up -d`
