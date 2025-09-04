@@ -320,10 +320,22 @@ def display_main_interface():
                 message.get("references")):
                 
                 with st.expander("📚 References"):
-                    for ref in message["references"]:
-                        st.markdown(f"**{ref.get('document_name', 'Unknown')}**")
-                        st.caption(f"Similarity: {ref.get('similarity', 0):.2f}")
-                        st.text(ref.get('content', '')[:200] + "...")
+                    for i, ref in enumerate(message["references"], 1):
+                        st.markdown(f"**Reference {i}: {ref.get('document_name', 'Unknown')}**")
+                        st.caption(f"Similarity Score: {ref.get('similarity', 0):.2f}")
+                        
+                        # Show full content with proper formatting
+                        ref_content = ref.get('content', '')
+                        if ref_content:
+                            with st.container():
+                                st.markdown("**Content:**")
+                                st.markdown(ref_content, unsafe_allow_html=False)
+                        else:
+                            st.info("No content available for this reference")
+                        
+                        # Add separator between references
+                        if i < len(message["references"]):
+                            st.divider()
     
     # Chat input
     if prompt := st.chat_input("Ask about RCSB PDB, protein structures, or anything related..."):
@@ -368,13 +380,25 @@ def display_main_interface():
                     "references": references
                 })
                 
-                # Show references if enabled
+                # Show references if available
                 if st.session_state.show_references and references:
                     with st.expander("📚 References"):
-                        for ref in references:
-                            st.markdown(f"**{ref.get('document_name', 'Unknown')}**")
-                            st.caption(f"Similarity: {ref.get('similarity', 0):.2f}")
-                            st.text(ref.get('content', '')[:200] + "...")
+                        for i, ref in enumerate(references, 1):
+                            st.markdown(f"**Reference {i}: {ref.get('document_name', 'Unknown')}**")
+                            st.caption(f"Similarity Score: {ref.get('similarity', 0):.2f}")
+                            
+                            # Show full content with proper formatting
+                            ref_content = ref.get('content', '')
+                            if ref_content:
+                                with st.container():
+                                    st.markdown("**Content:**")
+                                    st.markdown(ref_content, unsafe_allow_html=False)
+                            else:
+                                st.info("No content available for this reference")
+                            
+                            # Add separator between references
+                            if i < len(references):
+                                st.divider()
                 
             except Exception as e:
                 st.error(f"Error getting response: {e}")
@@ -391,16 +415,8 @@ def sidebar_settings():
     
     st.sidebar.markdown("### ⚙️ Settings")
     
-    # References toggle (only show in debug mode)
-    if os.getenv("DEBUG_MODE", "false").lower() == "true":
-        st.session_state.show_references = st.sidebar.checkbox(
-            "📚 Show References",
-            value=st.session_state.show_references,
-            help="Display source documents and similarity scores"
-        )
-    else:
-        # In production mode, keep references disabled
-        st.session_state.show_references = False
+    # Always show references when available (removed checkbox)
+    st.session_state.show_references = True
     
     # Advanced settings (only in debug mode)
     if os.getenv("DEBUG_MODE", "false").lower() == "true":
@@ -419,10 +435,58 @@ def sidebar_settings():
                     st.metric("Top-N", config.top_n)
                     st.metric("Similarity", f"{config.similarity_threshold:.1f}")
                 
-                # Show current prompt (truncated)
-                st.markdown("**System Prompt:**")
-                prompt_preview = config.system_prompt[:200] + "..." if len(config.system_prompt) > 200 else config.system_prompt
-                st.caption(prompt_preview)
+                # Interactive Prompt Editor
+                st.markdown("**System Prompt Editor:**")
+                st.caption(f"Current prompt length: {len(config.system_prompt)} characters")
+                
+                # Toggle button to show/hide current prompt
+                if "show_current_prompt" not in st.session_state:
+                    st.session_state.show_current_prompt = False
+                    
+                if st.button("👁️ Show/Hide Current Prompt", key="toggle_prompt_view"):
+                    st.session_state.show_current_prompt = not st.session_state.show_current_prompt
+                
+                # Show current prompt if toggled on
+                if st.session_state.show_current_prompt:
+                    st.markdown("**Current System Prompt:**")
+                    st.code(config.system_prompt, language="text")
+                
+                # Prompt editor
+                new_prompt = st.text_area(
+                    "Edit System Prompt:",
+                    value=config.system_prompt,
+                    height=300,
+                    help="Edit the system prompt and click 'Update Prompt' to apply changes",
+                    key="prompt_editor"
+                )
+                
+                # Update prompt button
+                col_update, col_reset = st.columns(2)
+                with col_update:
+                    if st.button("🔄 Update Prompt", type="primary"):
+                        if new_prompt.strip() and new_prompt != config.system_prompt:
+                            with st.spinner("Updating assistant prompt..."):
+                                success = st.session_state.session_manager.assistant_manager.update_prompt(new_prompt.strip())
+                                if success:
+                                    # Update the config in session state
+                                    st.session_state.session_manager.assistant_config.system_prompt = new_prompt.strip()
+                                    st.success("✅ Prompt updated successfully!")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Failed to update prompt")
+                        elif new_prompt == config.system_prompt:
+                            st.info("No changes detected in prompt")
+                        else:
+                            st.error("Prompt cannot be empty")
+                
+                with col_reset:
+                    if st.button("↺ Reset to Default"):
+                        from ragflow_assistant_manager import create_default_assistant_config
+                        default_config = create_default_assistant_config()
+                        st.session_state["prompt_editor"] = default_config.system_prompt
+                        st.rerun()
+                
+                st.divider()
                 
                 # Assistant health check
                 if st.button("🔍 Check Assistant Health"):
