@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
+from collections import namedtuple
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
@@ -52,6 +53,24 @@ class ProcessingResults:
     metrics: Dict[str, Any]
 
 
+# Data structures for incremental sync
+FileInfo = namedtuple('FileInfo', ['path', 'name', 'size', 'mtime'])
+ChangeSet = namedtuple('ChangeSet', ['new_files', 'updated_files', 'deleted_docs'])
+
+
+@dataclass
+class SyncResults:
+    """Results from incremental sync operation"""
+    dataset_id: str
+    new_documents: int
+    updated_documents: int
+    deleted_documents: int
+    unchanged_documents: int
+    processing_time: float
+    status: str
+    errors: List[str]
+
+
 class KnowledgeBaseInitializer:
     """Handles automated RCSB PDB knowledge base initialization"""
 
@@ -87,6 +106,147 @@ class KnowledgeBaseInitializer:
         self.logger.info(f"Found {len(content_files)} knowledge base files")
 
         return content_files
+
+    def get_local_files_with_metadata(self) -> Dict[str, FileInfo]:
+        """Get local knowledge base files with metadata for change detection"""
+        files_metadata = {}
+        
+        for pattern in ["*.pdf", "*.txt"]:
+            for file_path in self.knowledge_base_dir.glob(pattern):
+                # Skip system files
+                if file_path.name in ["README.md", "initialize_dataset.py"]:
+                    continue
+                
+                stat = file_path.stat()
+                file_info = FileInfo(
+                    path=file_path,
+                    name=file_path.name,
+                    size=stat.st_size,
+                    mtime=stat.st_mtime
+                )
+                files_metadata[file_path.name] = file_info
+        
+        self.logger.info(f"Found {len(files_metadata)} local files for sync")
+        return files_metadata
+
+    def get_existing_documents_map(self, dataset: Any) -> Dict[str, Any]:
+        """Get existing documents in dataset mapped by filename"""
+        try:
+            documents = dataset.list_documents()
+            docs_map = {doc.name: doc for doc in documents}
+            self.logger.info(f"Found {len(docs_map)} existing documents in dataset")
+            return docs_map
+        except Exception as e:
+            self.logger.error(f"Failed to list existing documents: {e}")
+            return {}
+
+    def detect_file_changes(self, local_files: Dict[str, FileInfo], existing_docs: Dict[str, Any]) -> ChangeSet:
+        """Detect changes between local files and existing documents"""
+        new_files = []
+        updated_files = []
+        deleted_docs = []
+        
+        # Find new and updated files
+        for filename, file_info in local_files.items():
+            if filename not in existing_docs:
+                # New file
+                new_files.append(file_info)
+                self.logger.info(f"NEW: {filename}")
+            else:
+                # Check if file was updated (size comparison for now)
+                existing_doc = existing_docs[filename]
+                if file_info.size != existing_doc.size:
+                    updated_files.append(file_info)
+                    self.logger.info(f"UPDATED: {filename} (size: {existing_doc.size} → {file_info.size})")
+        
+        # Find deleted files (exist in dataset but not locally)
+        for filename, doc in existing_docs.items():
+            if filename not in local_files:
+                deleted_docs.append(doc)
+                self.logger.info(f"DELETED: {filename}")
+        
+        changeset = ChangeSet(new_files, updated_files, deleted_docs)
+        
+        total_changes = len(new_files) + len(updated_files) + len(deleted_docs)
+        unchanged = len(local_files) - len(new_files) - len(updated_files)
+        
+        self.logger.info(f"Change detection: {len(new_files)} new, {len(updated_files)} updated, "
+                        f"{len(deleted_docs)} deleted, {unchanged} unchanged")
+        
+        return changeset
+
+    def apply_document_changes(self, dataset: Any, changeset: ChangeSet) -> List[str]:
+        """Apply document changes and return list of document IDs to process"""
+        doc_ids_to_process = []
+        
+        try:
+            # Delete removed documents
+            if changeset.deleted_docs:
+                delete_ids = [doc.id for doc in changeset.deleted_docs]
+                dataset.delete_documents(delete_ids)
+                self.logger.info(f"Deleted {len(delete_ids)} documents")
+            
+            # Handle updated documents (delete old, upload new)
+            if changeset.updated_files:
+                # Delete old versions
+                existing_docs = self.get_existing_documents_map(dataset)
+                update_delete_ids = []
+                for file_info in changeset.updated_files:
+                    if file_info.name in existing_docs:
+                        update_delete_ids.append(existing_docs[file_info.name].id)
+                
+                if update_delete_ids:
+                    dataset.delete_documents(update_delete_ids)
+                    self.logger.info(f"Deleted {len(update_delete_ids)} documents for update")
+            
+            # Upload new and updated documents
+            files_to_upload = changeset.new_files + changeset.updated_files
+            if files_to_upload:
+                document_list = []
+                for file_info in files_to_upload:
+                    try:
+                        with open(file_info.path, 'rb') as f:
+                            document_list.append({
+                                "display_name": file_info.name,
+                                "blob": f.read()
+                            })
+                        self.logger.info(f"Prepared {file_info.name}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to read {file_info.path}: {e}")
+                
+                if document_list:
+                    uploaded_docs = dataset.upload_documents(document_list)
+                    self.logger.info(f"Uploaded {len(document_list)} documents")
+                    
+                    # Get document IDs for processing
+                    # We need to get the IDs of newly uploaded documents
+                    updated_docs = self.get_existing_documents_map(dataset)
+                    for file_info in files_to_upload:
+                        if file_info.name in updated_docs:
+                            doc_ids_to_process.append(updated_docs[file_info.name].id)
+            
+            return doc_ids_to_process
+            
+        except Exception as e:
+            self.logger.error(f"Failed to apply document changes: {e}")
+            raise
+
+    def process_changed_documents(self, dataset: Any, doc_ids: List[str]) -> None:
+        """Process only the changed documents"""
+        if not doc_ids:
+            self.logger.info("No documents to process")
+            return
+            
+        try:
+            self.logger.info(f"Starting processing for {len(doc_ids)} changed documents...")
+            dataset.async_parse_documents(doc_ids)
+            
+            # Monitor processing progress for changed documents only
+            self.monitor_processing_progress(dataset, doc_ids)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to process changed documents: {e}")
+            raise
 
     def create_optimal_dataset_config(self) -> Dict[str, Any]:
         """Create optimal dataset configuration for scientific documents"""
@@ -354,6 +514,144 @@ class KnowledgeBaseInitializer:
                 metrics={}
             )
 
+    def sync_knowledge_base(self) -> SyncResults:
+        """
+        Intelligent incremental sync of knowledge base
+        Only processes new, updated, or deleted documents
+        
+        Returns:
+            SyncResults with sync operation details
+        """
+        start_time = time.time()
+        errors = []
+        
+        self.logger.info("Starting intelligent knowledge base sync...")
+        
+        # Validate environment
+        if not self.validate_environment():
+            return SyncResults(
+                dataset_id="",
+                new_documents=0,
+                updated_documents=0,
+                deleted_documents=0,
+                unchanged_documents=0,
+                processing_time=0,
+                status="failed",
+                errors=["Environment validation failed"]
+            )
+        
+        try:
+            # Get or create dataset
+            dataset = self.check_existing_dataset()
+            if not dataset:
+                self.logger.info("No existing dataset found, creating new one...")
+                dataset = self.create_dataset()
+                # For new dataset, upload all documents
+                self.upload_documents(dataset)
+                self.process_documents(dataset)
+                
+                # Count all as new
+                docs = dataset.list_documents()
+                return SyncResults(
+                    dataset_id=dataset.id,
+                    new_documents=len(docs),
+                    updated_documents=0,
+                    deleted_documents=0,
+                    unchanged_documents=0,
+                    processing_time=time.time() - start_time,
+                    status="completed",
+                    errors=[]
+                )
+            
+            self.logger.info(f"Using existing dataset: {dataset.id}")
+            
+            # Get current state
+            local_files = self.get_local_files_with_metadata()
+            existing_docs = self.get_existing_documents_map(dataset)
+            
+            # Detect changes
+            changeset = self.detect_file_changes(local_files, existing_docs)
+            
+            # Check if any changes detected
+            total_changes = len(changeset.new_files) + len(changeset.updated_files) + len(changeset.deleted_docs)
+            if total_changes == 0:
+                self.logger.info("No changes detected, sync complete")
+                return SyncResults(
+                    dataset_id=dataset.id,
+                    new_documents=0,
+                    updated_documents=0,
+                    deleted_documents=0,
+                    unchanged_documents=len(local_files),
+                    processing_time=time.time() - start_time,
+                    status="completed",
+                    errors=[]
+                )
+            
+            # Apply changes and get documents to process
+            doc_ids_to_process = self.apply_document_changes(dataset, changeset)
+            
+            # Process only changed documents
+            if doc_ids_to_process:
+                self.process_changed_documents(dataset, doc_ids_to_process)
+            
+            processing_time = time.time() - start_time
+            unchanged = len(local_files) - len(changeset.new_files) - len(changeset.updated_files)
+            
+            sync_results = SyncResults(
+                dataset_id=dataset.id,
+                new_documents=len(changeset.new_files),
+                updated_documents=len(changeset.updated_files),
+                deleted_documents=len(changeset.deleted_docs),
+                unchanged_documents=unchanged,
+                processing_time=processing_time,
+                status="completed",
+                errors=errors
+            )
+            
+            self.logger.info(f"Sync completed in {processing_time:.1f} seconds")
+            self.logger.info(f"Changes: {len(changeset.new_files)} new, {len(changeset.updated_files)} updated, "
+                           f"{len(changeset.deleted_docs)} deleted, {unchanged} unchanged")
+            
+            return sync_results
+            
+        except Exception as e:
+            self.logger.error(f"Knowledge base sync failed: {e}")
+            return SyncResults(
+                dataset_id="",
+                new_documents=0,
+                updated_documents=0,
+                deleted_documents=0,
+                unchanged_documents=0,
+                processing_time=time.time() - start_time,
+                status="failed",
+                errors=[str(e)]
+            )
+
+
+def sync_rcsb_dataset() -> SyncResults:
+    """
+    Convenience function for incremental sync of RCSB PDB dataset
+    
+    Returns:
+        SyncResults with sync operation details
+    """
+    # Get configuration from environment
+    api_key = os.getenv("RAGFLOW_API_KEY")
+    base_url = os.getenv("RAGFLOW_BASE_URL", "http://127.0.0.1:9380")
+    openai_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        print("Error: RAGFLOW_API_KEY not found in environment variables")
+        return SyncResults("", 0, 0, 0, 0, 0, "failed", ["Missing RAGFlow API key"])
+
+    if not openai_key:
+        print("Error: OPENAI_API_KEY not found in environment variables")
+        return SyncResults("", 0, 0, 0, 0, 0, "failed", ["Missing OpenAI API key"])
+
+    # Initialize and run sync
+    initializer = KnowledgeBaseInitializer(api_key, base_url, openai_key)
+    return initializer.sync_knowledge_base()
+
 
 def create_rcsb_dataset(force_recreate: bool = False) -> ProcessingResults:
     """
@@ -389,6 +687,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Initialize RCSB PDB Knowledge Base")
     parser.add_argument("--force", action="store_true", help="Force recreation of existing dataset")
+    parser.add_argument("--sync", action="store_true", help="Intelligent incremental sync (only process changed documents)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
@@ -396,7 +695,29 @@ if __name__ == "__main__":
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    results = create_rcsb_dataset(force_recreate=args.force)
+    # Choose operation mode
+    if args.sync:
+        results = sync_rcsb_dataset()
+        print(f"\n{'='*50}")
+        print("RCSB PDB Knowledge Base Sync Results")
+        print(f"{'='*50}")
+        print(f"Status: {results.status}")
+        print(f"Dataset ID: {results.dataset_id}")
+        print(f"New Documents: {results.new_documents}")
+        print(f"Updated Documents: {results.updated_documents}")
+        print(f"Deleted Documents: {results.deleted_documents}")
+        print(f"Unchanged Documents: {results.unchanged_documents}")
+        print(f"Processing Time: {results.processing_time:.1f} seconds")
+
+        if results.errors:
+            print(f"\nErrors:")
+            for error in results.errors:
+                print(f"  - {error}")
+
+        print(f"{'='*50}")
+        sys.exit(0 if results.status == "completed" else 1)
+    else:
+        results = create_rcsb_dataset(force_recreate=args.force)
 
     print(f"\n{'='*50}")
     print("RCSB PDB Knowledge Base Initialization Results")
