@@ -97,7 +97,7 @@ class KnowledgeBaseInitializer:
             "chunk_token_num": self.config.chunk_token_num,
             "delimiter": "\\n",
             "html4excel": self.config.html4excel,
-            "layout_recognize": "true" if self.config.layout_recognize else "false",
+            "layout_recognize": "DeepDOC" if self.config.layout_recognize else "false",
             "raptor": {
                 "use_raptor": self.config.use_raptor
             }
