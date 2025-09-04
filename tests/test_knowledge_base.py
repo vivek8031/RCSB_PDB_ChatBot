@@ -68,7 +68,7 @@ class TestKnowledgeBaseInitializer(unittest.TestCase):
         self.base_url = "http://localhost:9380"
         self.openai_key = "test_openai_key"
         
-        with patch('initialize_dataset.RAGFlowSimpleClient'):
+        with patch('initialize_dataset.RAGFlow'):
             self.initializer = KnowledgeBaseInitializer(
                 self.api_key, self.base_url, self.openai_key
             )
@@ -148,7 +148,7 @@ class TestDocumentProcessing(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        with patch('initialize_dataset.RAGFlowSimpleClient'):
+        with patch('initialize_dataset.RAGFlow'):
             self.initializer = KnowledgeBaseInitializer(
                 "test_key", "http://localhost:9380", "openai_key"
             )
@@ -226,7 +226,7 @@ class TestDocumentProcessing(unittest.TestCase):
 class TestIntegration(unittest.TestCase):
     """Integration tests for complete knowledge base initialization"""
     
-    @patch('initialize_dataset.RAGFlowSimpleClient')
+    @patch('initialize_dataset.RAGFlow')
     def test_create_rcsb_dataset_missing_ragflow_key(self, mock_client):
         """Test dataset creation with missing RAGFlow key"""
         with patch.dict(os.environ, {}, clear=True):
@@ -235,7 +235,7 @@ class TestIntegration(unittest.TestCase):
             self.assertEqual(result.status, "failed")
             self.assertIn("Missing RAGFlow API key", result.errors[0])
     
-    @patch('initialize_dataset.RAGFlowSimpleClient')
+    @patch('initialize_dataset.RAGFlow')
     def test_create_rcsb_dataset_missing_openai_key(self, mock_client):
         """Test dataset creation with missing OpenAI key"""
         with patch.dict(os.environ, {"RAGFLOW_API_KEY": "test_key"}, clear=True):
@@ -244,7 +244,7 @@ class TestIntegration(unittest.TestCase):
             self.assertEqual(result.status, "failed")
             self.assertIn("Missing OpenAI API key", result.errors[0])
     
-    @patch('initialize_dataset.RAGFlowSimpleClient')
+    @patch('initialize_dataset.RAGFlow')
     def test_successful_initialization_flow(self, mock_client_class):
         """Test successful knowledge base initialization"""
         # Mock environment
@@ -328,7 +328,7 @@ class TestOpenAIIntegration(unittest.TestCase):
     
     def test_environment_validation_requires_openai_key(self):
         """Test that environment validation requires OpenAI API key"""
-        with patch('initialize_dataset.RAGFlowSimpleClient'):
+        with patch('initialize_dataset.RAGFlow'):
             initializer = KnowledgeBaseInitializer(
                 "ragflow_key", "http://localhost:9380", None
             )
