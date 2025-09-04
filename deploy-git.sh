@@ -6,7 +6,8 @@
 set -e  # Exit on any error
 
 # Configuration
-PROD_SERVER="ubuntu@128.6.158.52"
+# PROD_SERVER="ubuntu@128.6.158.52"
+PROD_SERVER="ubuntu@10.20.1.89"
 REPO_URL="https://github.com/vivek8031/RCSB_PDB_ChatBot.git"
 APP_DIR="/home/ubuntu/RCSB_PDB_ChatBot"
 CONTAINER_NAME="rcsb_pdb_chatbot"
@@ -91,6 +92,22 @@ print_success "Application code updated from Git"
 print_status "Setting up user data directory..."
 run_remote "mkdir -p $APP_DIR/user_data"
 print_success "User data directory ready"
+
+# Step 5.1: Create production .env file
+print_status "Setting up production environment configuration..."
+run_remote "
+    cd $APP_DIR &&
+    cat > .env << 'EOF'
+# RCSB PDB ChatBot Production Environment Configuration
+RAGFLOW_API_KEY=ragflow-VlMmJhNWU4NmQxMDExZjBiNTQxNjI0Mj
+RAGFLOW_BASE_URL=http://128.6.158.52:8080
+RAGFLOW_ASSISTANT_NAME=RCSB ChatBot v2
+USER_DATA_DIR=user_data
+DEBUG_MODE=false
+LOG_LEVEL=INFO
+EOF
+"
+print_success "Production environment configuration created"
 
 # Step 6: Stop existing container if running
 print_status "Stopping existing container..."
