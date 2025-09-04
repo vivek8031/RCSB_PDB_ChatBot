@@ -37,7 +37,7 @@ class TestDatasetConfig(unittest.TestCase):
         
         self.assertEqual(config.name, "rcsb_pdb_knowledge_base")
         self.assertEqual(config.embedding_model, "text-embedding-3-large@OpenAI")
-        self.assertEqual(config.chunk_method, "paper")
+        self.assertEqual(config.chunk_method, "naive")
         self.assertEqual(config.chunk_token_num, 512)
         self.assertTrue(config.use_raptor)
         self.assertTrue(config.layout_recognize)
@@ -46,8 +46,8 @@ class TestDatasetConfig(unittest.TestCase):
         """Test configuration is optimized for scientific documents"""
         config = DatasetConfig()
         
-        # Should use paper method for scientific content
-        self.assertEqual(config.chunk_method, "paper")
+        # Should use naive method for mixed document types with full RAPTOR support
+        self.assertEqual(config.chunk_method, "naive")
         
         # Should use recommended chunk size
         self.assertEqual(config.chunk_token_num, 512)
@@ -57,6 +57,9 @@ class TestDatasetConfig(unittest.TestCase):
         
         # Should enable DeepDoc layout recognition
         self.assertTrue(config.layout_recognize)
+        
+        # Should have HTML4Excel setting
+        self.assertFalse(config.html4excel)
 
 
 class TestKnowledgeBaseInitializer(unittest.TestCase):
@@ -113,8 +116,12 @@ class TestKnowledgeBaseInitializer(unittest.TestCase):
         for key in expected_keys:
             self.assertIn(key, config)
         
-        # Test that parser_config is None (uses defaults)
-        self.assertIsNone(config["parser_config"])
+        # Test that parser_config is a ParserConfig object
+        from ragflow_sdk.modules.dataset import DataSet
+        self.assertIsInstance(config["parser_config"], DataSet.ParserConfig)
+        
+        # Test chunk method is naive
+        self.assertEqual(config["chunk_method"], "naive")
     
     def test_validate_environment_success(self):
         """Test successful environment validation"""
@@ -217,7 +224,7 @@ class TestDocumentProcessing(unittest.TestCase):
         self.assertEqual(metrics["total_tokens"], 3600)  # 1000 + 1200 + 1400
         self.assertEqual(metrics["processing_success_rate"], 1.0)
         self.assertTrue(metrics["raptor_enabled"])
-        self.assertEqual(metrics["chunk_method"], "paper")
+        self.assertEqual(metrics["chunk_method"], "naive")
 
 
 class TestIntegration(unittest.TestCase):
@@ -298,18 +305,21 @@ class TestRaptorConfiguration(unittest.TestCase):
     
     def test_raptor_parser_config(self):
         """Test RAPTOR configuration in parser settings"""
-        initializer = Mock()
-        initializer.config = DatasetConfig()
-        
-        # Mock the method to test actual implementation
-        from initialize_dataset import KnowledgeBaseInitializer
-        real_initializer = KnowledgeBaseInitializer.__new__(KnowledgeBaseInitializer)
-        real_initializer.config = DatasetConfig()
-        
-        parser_config = real_initializer.create_optimal_dataset_config()["parser_config"]
-        
-        # parser_config should be None to use defaults for paper method
-        self.assertIsNone(parser_config)
+        with patch('initialize_dataset.RAGFlow'):
+            initializer = Mock()
+            initializer.config = DatasetConfig()
+            
+            # Mock the method to test actual implementation
+            from initialize_dataset import KnowledgeBaseInitializer
+            real_initializer = KnowledgeBaseInitializer.__new__(KnowledgeBaseInitializer)
+            real_initializer.config = DatasetConfig()
+            real_initializer.ragflow_client = Mock()
+            
+            parser_config = real_initializer.create_optimal_dataset_config()["parser_config"]
+            
+            # parser_config should be a ParserConfig object for naive method with RAPTOR
+            from ragflow_sdk.modules.dataset import DataSet
+            self.assertIsInstance(parser_config, DataSet.ParserConfig)
 
 
 class TestOpenAIIntegration(unittest.TestCase):

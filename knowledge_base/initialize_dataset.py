@@ -33,10 +33,11 @@ class DatasetConfig:
     name: str = "rcsb_pdb_knowledge_base"
     description: str = "RCSB PDB scientific documentation and procedures with RAPTOR hierarchical processing"
     embedding_model: str = "text-embedding-3-large@OpenAI"
-    chunk_method: str = "paper"  # Optimized for scientific documents
+    chunk_method: str = "naive"  # General method supporting all document types and full RAPTOR
     chunk_token_num: int = 512  # Recommended size
     use_raptor: bool = True
     layout_recognize: bool = True  # DeepDoc PDF parsing
+    html4excel: bool = False  # HTML parsing for Excel files
 
 
 @dataclass
@@ -89,16 +90,28 @@ class KnowledgeBaseInitializer:
 
     def create_optimal_dataset_config(self) -> Dict[str, Any]:
         """Create optimal dataset configuration for scientific documents"""
-        # Note: parser_config is set to None to use defaults
-        # The paper chunk method will use its default configuration
-        # We can update parser_config after dataset creation if needed
+        from ragflow_sdk.modules.dataset import DataSet
+        
+        # Create parser configuration dictionary for naive method
+        parser_config_dict = {
+            "chunk_token_num": self.config.chunk_token_num,
+            "delimiter": "\\n",
+            "html4excel": self.config.html4excel,
+            "layout_recognize": "true" if self.config.layout_recognize else "false",
+            "raptor": {
+                "use_raptor": self.config.use_raptor
+            }
+        }
+        
+        # Create ParserConfig object with RAGFlow client and config dict
+        parser_config = DataSet.ParserConfig(self.ragflow_client, parser_config_dict)
         
         return {
             "name": self.config.name,
             "description": self.config.description,
             "embedding_model": self.config.embedding_model,
             "chunk_method": self.config.chunk_method,
-            "parser_config": None  # Use default parser config for paper method
+            "parser_config": parser_config
         }
 
     def validate_environment(self) -> bool:
@@ -300,7 +313,8 @@ class KnowledgeBaseInitializer:
             else:
                 if dataset and force_recreate:
                     self.logger.info("Deleting existing dataset for recreation")
-                    # Note: Add dataset deletion logic if needed
+                    self.ragflow_client.delete_datasets([dataset.id])
+                    self.logger.info(f"Deleted dataset: {dataset.id}")
 
                 dataset = self.create_dataset()
 
