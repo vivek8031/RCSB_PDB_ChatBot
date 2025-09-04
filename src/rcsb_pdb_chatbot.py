@@ -14,6 +14,7 @@ from typing import List, Dict, Any, Optional
 # Using Streamlit's built-in st.markdown for all markdown processing
 
 from user_session_manager import UserSessionManager, UserChat, create_manager
+from ragflow_assistant_manager import create_default_assistant_config
 
 
 def process_markdown_response(content: str) -> str:
@@ -400,6 +401,37 @@ def sidebar_settings():
     else:
         # In production mode, keep references disabled
         st.session_state.show_references = False
+    
+    # Advanced settings (only in debug mode)
+    if os.getenv("DEBUG_MODE", "false").lower() == "true":
+        with st.sidebar.expander("🔧 Advanced Settings"):
+            st.markdown("**Assistant Configuration:**")
+            
+            # Show current assistant config
+            if hasattr(st.session_state.session_manager, 'assistant_config'):
+                config = st.session_state.session_manager.assistant_config
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Temperature", f"{config.temperature:.1f}")
+                    st.metric("Top-P", f"{config.top_p:.1f}")
+                with col2:
+                    st.metric("Top-N", config.top_n)
+                    st.metric("Similarity", f"{config.similarity_threshold:.1f}")
+                
+                # Show current prompt (truncated)
+                st.markdown("**System Prompt:**")
+                prompt_preview = config.system_prompt[:200] + "..." if len(config.system_prompt) > 200 else config.system_prompt
+                st.caption(prompt_preview)
+                
+                # Assistant health check
+                if st.button("🔍 Check Assistant Health"):
+                    with st.spinner("Checking RAGFlow connection..."):
+                        health = st.session_state.session_manager.assistant_manager.health_check()
+                        if all(health.values()):
+                            st.success("✅ All systems operational")
+                        else:
+                            st.warning(f"⚠️ Issues detected: {health}")
     
     # Export functionality
     if st.sidebar.button("📤 Export Current Chat"):

@@ -19,7 +19,22 @@ try:
 except ImportError:
     print("Warning: python-dotenv not installed. Environment variables from .env file won't be loaded.")
 
-from ragflow_simple_client import RAGFlowSimpleClient, ChatSession, ChatMessage
+from ragflow_assistant_manager import (
+    RAGFlowAssistantManager, 
+    create_assistant_manager, 
+    create_default_assistant_config,
+    StreamingResponse
+)
+
+
+@dataclass
+class ChatMessage:
+    """Represents a chat message for streaming compatibility"""
+    role: str  # 'user' or 'assistant'
+    content: str
+    timestamp: datetime
+    message_id: Optional[str] = None
+    references: Optional[List[Dict]] = None
 
 
 @dataclass
@@ -70,8 +85,17 @@ class UserSessionManager:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(exist_ok=True)
         
-        # Create RAGFlow client
-        self.ragflow_client = RAGFlowSimpleClient(api_key=api_key, base_url=base_url)
+        # Create RAGFlow assistant manager
+        self.assistant_manager = RAGFlowAssistantManager(api_key=api_key, base_url=base_url)
+        self.assistant_config = create_default_assistant_config()
+        
+        # Initialize or get assistant
+        try:
+            self.assistant_id = self.assistant_manager.get_or_create_assistant(self.assistant_config)
+            print(f"✅ Assistant ready: {self.assistant_config.name} (ID: {self.assistant_id})")
+        except Exception as e:
+            print(f"❌ Failed to initialize assistant: {e}")
+            self.assistant_id = None
         
         # In-memory cache of user sessions
         self.user_sessions: Dict[str, UserSession] = {}
@@ -180,9 +204,13 @@ class UserSessionManager:
             UserChat object
         """
         try:
+            # Check if assistant is available
+            if not self.assistant_id:
+                raise ValueError("RAGFlow assistant not available")
+            
             # Create a new RAGFlow session with user-specific naming
             ragflow_session_name = f"{user_id}_{chat_title}_{int(time.time())}"
-            ragflow_session = self.ragflow_client.create_session(ragflow_session_name)
+            ragflow_session_id = self.assistant_manager.create_session(self.assistant_id, ragflow_session_name)
             
             # Create user chat object
             chat_id = str(uuid.uuid4())
@@ -192,7 +220,7 @@ class UserSessionManager:
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
                 message_count=0,
-                ragflow_session_id=ragflow_session.session_id,
+                ragflow_session_id=ragflow_session_id,
                 messages=[]  # Initialize with empty message list
             )
             
@@ -286,14 +314,22 @@ class UserSessionManager:
             full_response = ""
             final_references = None
             
-            for response_chunk in self.ragflow_client.send_message(
+            for response_chunk in self.assistant_manager.send_message(
                 user_chat.ragflow_session_id, 
                 message, 
                 stream=True
             ):
                 full_response = response_chunk.content
                 final_references = response_chunk.references
-                yield response_chunk
+                
+                # Convert StreamingResponse to ChatMessage for compatibility
+                chat_message = ChatMessage(
+                    role="assistant",
+                    content=response_chunk.content,
+                    timestamp=datetime.now(),
+                    references=response_chunk.references
+                )
+                yield chat_message
             
             # Store the assistant's response
             if full_response:
@@ -325,8 +361,8 @@ class UserSessionManager:
         for i, chat in enumerate(user_session.chats):
             if chat.chat_id == chat_id:
                 try:
-                    # Delete the underlying RAGFlow session
-                    self.ragflow_client.delete_session(chat.ragflow_session_id)
+                    # Note: RAGFlow SDK doesn't provide direct session deletion
+                    # We'll just remove from our local session management
                     
                     # Remove from user session
                     user_session.chats.pop(i)
@@ -336,6 +372,7 @@ class UserSessionManager:
                     self._save_user_sessions(user_session)
                     
                     print(f"✅ Deleted chat '{chat.title}' for user {user_id}")
+                    print(f"ℹ️  Note: RAGFlow session {chat.ragflow_session_id} remains on server")
                     return True
                     
                 except Exception as e:
@@ -379,9 +416,8 @@ class UserSessionManager:
         try:
             user_session = self.get_user_session(user_id)
             
-            # Delete all RAGFlow sessions for this user
-            for chat in user_session.chats:
-                self.ragflow_client.delete_session(chat.ragflow_session_id)
+            # Note: RAGFlow SDK doesn't provide session deletion
+            # Sessions remain on server but are removed from local management
             
             # Delete user data file
             data_file = self._get_user_data_file(user_id)
@@ -403,11 +439,11 @@ class UserSessionManager:
 def create_manager() -> UserSessionManager:
     """Create a UserSessionManager with environment-based configuration"""
     # Load configuration from environment variables with fallback defaults
-    API_KEY = os.getenv("RAGFLOW_API_KEY", "ragflow-VjNjM4Zjk0NmMyZDExZjA4MjQyNTY3YT")
+    API_KEY = os.getenv("RAGFLOW_API_KEY")
     BASE_URL = os.getenv("RAGFLOW_BASE_URL", "http://127.0.0.1:9380")
     DATA_DIR = os.getenv("USER_DATA_DIR", "user_data")
     
-    if not API_KEY or API_KEY == "your_api_key_here":
+    if not API_KEY or API_KEY == "your-ragflow-api-key-here":
         raise ValueError("RAGFLOW_API_KEY environment variable must be set with a valid API key")
     
     return UserSessionManager(api_key=API_KEY, base_url=BASE_URL, data_dir=DATA_DIR)
