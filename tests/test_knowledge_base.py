@@ -113,11 +113,8 @@ class TestKnowledgeBaseInitializer(unittest.TestCase):
         for key in expected_keys:
             self.assertIn(key, config)
         
-        # Test parser config
-        parser_config = config["parser_config"]
-        self.assertEqual(parser_config["chunk_token_num"], 512)
-        self.assertTrue(parser_config["layout_recognize"])
-        self.assertTrue(parser_config["raptor"]["use_raptor"])
+        # Test that parser_config is None (uses defaults)
+        self.assertIsNone(config["parser_config"])
     
     def test_validate_environment_success(self):
         """Test successful environment validation"""
@@ -311,9 +308,8 @@ class TestRaptorConfiguration(unittest.TestCase):
         
         parser_config = real_initializer.create_optimal_dataset_config()["parser_config"]
         
-        self.assertTrue(parser_config["raptor"]["use_raptor"])
-        self.assertEqual(parser_config["chunk_token_num"], 512)
-        self.assertTrue(parser_config["layout_recognize"])
+        # parser_config should be None to use defaults for paper method
+        self.assertIsNone(parser_config)
 
 
 class TestOpenAIIntegration(unittest.TestCase):
