@@ -22,13 +22,13 @@ except ImportError:
     raise ImportError("RAGFlow SDK not installed. Run: pip install ragflow-sdk")
 
 
-@dataclass 
+@dataclass
 class AssistantConfig:
     """Configuration for RAGFlow chat assistant"""
     name: str
     dataset_name: str = "rcsb_pdb_knowledge_base"
     system_prompt: str = ""
-    model_name: str = "gpt-4-turbo"
+    model_name: str = "gpt-4.1"
     temperature: float = 0.1
     top_p: float = 0.3
     presence_penalty: float = 0.2
@@ -51,11 +51,11 @@ class StreamingResponse:
 
 class RAGFlowAssistantManager:
     """Smart manager for RAGFlow chat assistants with automated lifecycle management"""
-    
+
     def __init__(self, api_key: str, base_url: str):
         """
         Initialize the RAGFlow assistant manager
-        
+
         Args:
             api_key: RAGFlow API key
             base_url: RAGFlow server base URL
@@ -65,28 +65,28 @@ class RAGFlowAssistantManager:
         self._ragflow_client = None
         self._current_assistant = None
         self._dataset_cache = {}
-        
+
     @property
     def ragflow_client(self):
         """Lazy initialization of RAGFlow client"""
         if self._ragflow_client is None:
             self._ragflow_client = RAGFlow(api_key=self.api_key, base_url=self.base_url)
         return self._ragflow_client
-    
+
     def get_or_create_dataset(self, dataset_name: str) -> str:
         """
         Get existing dataset or create if it doesn't exist
-        
+
         Args:
             dataset_name: Name of the dataset
-            
+
         Returns:
             Dataset ID
         """
         # Check cache first
         if dataset_name in self._dataset_cache:
             return self._dataset_cache[dataset_name]
-        
+
         try:
             # Try to find existing dataset
             datasets = self.ragflow_client.list_datasets(name=dataset_name)
@@ -97,11 +97,11 @@ class RAGFlowAssistantManager:
                 return dataset_id
         except Exception as e:
             print(f"⚠️  Error searching for dataset {dataset_name}: {e}")
-        
+
         # Create new dataset if not found
         try:
             from ragflow_sdk import DataSet
-            
+
             # Configure for scientific documents with RAPTOR
             parser_config = DataSet.ParserConfig(
                 chunk_token_num=512,
@@ -110,31 +110,31 @@ class RAGFlowAssistantManager:
                 layout_recognize="DeepDOC",
                 raptor={"use_raptor": True}
             )
-            
+
             dataset = self.ragflow_client.create_dataset(
                 name=dataset_name,
                 description="RCSB PDB knowledge base with scientific documentation",
-                embedding_model="text-embedding-3-large@OpenAI", 
+                embedding_model="text-embedding-3-large@OpenAI",
                 chunk_method="naive",
                 parser_config=parser_config
             )
-            
+
             dataset_id = dataset.id
             self._dataset_cache[dataset_name] = dataset_id
             print(f"🆕 Created new dataset: {dataset_name} (ID: {dataset_id})")
             return dataset_id
-            
+
         except Exception as e:
             print(f"❌ Error creating dataset {dataset_name}: {e}")
             raise
-    
+
     def get_or_create_assistant(self, config: AssistantConfig) -> str:
         """
         Get existing chat assistant or create if it doesn't exist
-        
+
         Args:
             config: Assistant configuration
-            
+
         Returns:
             Chat assistant ID
         """
@@ -143,22 +143,22 @@ class RAGFlowAssistantManager:
             assistants = self.ragflow_client.list_chats(name=config.name)
             if assistants:
                 assistant = assistants[0]
-                
+
                 # Update configuration if needed
                 self._update_assistant_config(assistant, config)
-                
+
                 self._current_assistant = assistant
                 print(f"✅ Using existing assistant: {config.name} (ID: {assistant.id})")
                 return assistant.id
-                
+
         except Exception as e:
             print(f"⚠️  Error searching for assistant {config.name}: {e}")
-        
+
         # Create new assistant
         try:
             # Get dataset ID
             dataset_id = self.get_or_create_dataset(config.dataset_name)
-            
+
             # Create assistant with default LLM settings
             assistant = self.ragflow_client.create_chat(
                 name=config.name,
@@ -166,22 +166,22 @@ class RAGFlowAssistantManager:
                 llm=None,  # Use default LLM settings
                 prompt=None  # Use default prompt settings
             )
-            
+
             # Update assistant with custom configuration
             self._update_assistant_config(assistant, config)
-            
+
             self._current_assistant = assistant
             print(f"🆕 Created new assistant: {config.name} (ID: {assistant.id})")
             return assistant.id
-            
+
         except Exception as e:
             print(f"❌ Error creating assistant {config.name}: {e}")
             raise
-    
+
     def _update_assistant_config(self, assistant, config: AssistantConfig):
         """
         Update assistant configuration if needed
-        
+
         Args:
             assistant: RAGFlow Chat object
             config: New configuration
@@ -189,7 +189,7 @@ class RAGFlowAssistantManager:
         try:
             # Get dataset ID
             dataset_id = self.get_or_create_dataset(config.dataset_name)
-            
+
             # Prepare update payload with proper structure
             update_data = {
                 "name": config.name,
@@ -205,22 +205,22 @@ class RAGFlowAssistantManager:
                     "prompt": config.system_prompt
                 }
             }
-            
+
             # Update assistant
             assistant.update(update_data)
             print(f"🔄 Updated assistant configuration: {config.name}")
-            
+
         except Exception as e:
             print(f"⚠️  Error updating assistant config: {e}")
-    
+
     def create_session(self, assistant_id: str, session_name: str = "New Session") -> str:
         """
         Create a new chat session
-        
+
         Args:
             assistant_id: ID of the chat assistant
             session_name: Name for the session
-            
+
         Returns:
             Session ID
         """
@@ -231,25 +231,25 @@ class RAGFlowAssistantManager:
                 if not assistants:
                     raise ValueError(f"Assistant {assistant_id} not found")
                 self._current_assistant = assistants[0]
-            
+
             # Create session
             session = self._current_assistant.create_session(name=session_name)
             print(f"🆕 Created session: {session_name} (ID: {session.id})")
             return session.id
-            
+
         except Exception as e:
             print(f"❌ Error creating session: {e}")
             raise
-    
+
     def send_message(self, session_id: str, message: str, stream: bool = True) -> Generator[StreamingResponse, None, None]:
         """
         Send message to chat session and get streaming response
-        
+
         Args:
             session_id: Session ID
             message: User message
             stream: Whether to stream response
-            
+
         Yields:
             StreamingResponse objects
         """
@@ -257,35 +257,35 @@ class RAGFlowAssistantManager:
             # Find session
             if not self._current_assistant:
                 raise ValueError("No current assistant available")
-            
+
             sessions = self._current_assistant.list_sessions(id=session_id)
             if not sessions:
                 raise ValueError(f"Session {session_id} not found")
-            
+
             session = sessions[0]
-            
+
             if stream:
                 # Stream response
                 full_content = ""
                 references = []
-                
+
                 for response in session.ask(message, stream=True):
                     if response.content:
                         full_content = response.content
-                        
+
                         yield StreamingResponse(
                             content=full_content,
                             references=getattr(response, 'reference', None),
                             is_complete=False
                         )
-                
+
                 # Final response
                 yield StreamingResponse(
                     content=full_content,
                     references=getattr(response, 'reference', None) if 'response' in locals() else None,
                     is_complete=True
                 )
-                
+
             else:
                 # Non-streaming response
                 response = session.ask(message, stream=False)
@@ -294,7 +294,7 @@ class RAGFlowAssistantManager:
                     references=getattr(response, 'reference', None),
                     is_complete=True
                 )
-                
+
         except Exception as e:
             print(f"❌ Error sending message: {e}")
             yield StreamingResponse(
@@ -302,7 +302,7 @@ class RAGFlowAssistantManager:
                 references=None,
                 is_complete=True
             )
-    
+
     def list_assistants(self) -> List[Dict]:
         """List all available chat assistants"""
         try:
@@ -318,7 +318,7 @@ class RAGFlowAssistantManager:
         except Exception as e:
             print(f"❌ Error listing assistants: {e}")
             return []
-    
+
     def delete_assistant(self, assistant_id: str):
         """Delete a chat assistant"""
         try:
@@ -327,7 +327,7 @@ class RAGFlowAssistantManager:
         except Exception as e:
             print(f"❌ Error deleting assistant: {e}")
             raise
-    
+
     def health_check(self) -> Dict[str, bool]:
         """Check health of RAGFlow connection and services"""
         health_status = {
@@ -335,39 +335,80 @@ class RAGFlowAssistantManager:
             "dataset_access": False,
             "assistant_access": False
         }
-        
+
         try:
             # Test basic connection
             datasets = self.ragflow_client.list_datasets(page=1, page_size=1)
             health_status["ragflow_connection"] = True
             health_status["dataset_access"] = True
-            
+
             # Test assistant access
             assistants = self.ragflow_client.list_chats(page=1, page_size=1)
             health_status["assistant_access"] = True
-            
+
         except Exception as e:
             print(f"⚠️  Health check failed: {e}")
-        
+
         return health_status
+    
+    def update_prompt(self, new_prompt: str) -> bool:
+        """
+        Update the system prompt for the current assistant
+        
+        Args:
+            new_prompt: New system prompt content
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self._current_assistant:
+            print("❌ No current assistant available for prompt update")
+            return False
+        
+        try:
+            # Get dataset ID for the current assistant's configuration
+            dataset_id = None
+            if hasattr(self._current_assistant, 'dataset_ids') and self._current_assistant.dataset_ids:
+                dataset_id = self._current_assistant.dataset_ids[0]
+            else:
+                # Fallback: get default dataset
+                dataset_id = self.get_or_create_dataset("rcsb_pdb_knowledge_base")
+            
+            # Prepare update payload with new prompt
+            update_data = {
+                "prompt": {
+                    "prompt": new_prompt,
+                    "variables": [{"key": "knowledge", "optional": True}],
+                    "show_quote": True
+                }
+            }
+            
+            # Update assistant prompt
+            self._current_assistant.update(update_data)
+            print(f"✅ Updated assistant prompt successfully")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error updating assistant prompt: {e}")
+            return False
 
 
 def create_assistant_manager() -> RAGFlowAssistantManager:
     """Create and configure RAGFlow assistant manager from environment variables"""
-    
+
     # Get required configuration
     api_key = os.getenv("RAGFLOW_API_KEY")
     base_url = os.getenv("RAGFLOW_BASE_URL", "http://127.0.0.1:9380")
-    
+
     if not api_key:
         raise ValueError("RAGFLOW_API_KEY environment variable is required")
-    
+
     return RAGFlowAssistantManager(api_key=api_key, base_url=base_url)
 
 
 def create_default_assistant_config() -> AssistantConfig:
     """Create default assistant configuration from environment variables"""
-    
+
     # Default enhanced knowledge base prompt
     default_prompt = """# Enhanced Knowledge Base Assistant Prompt
 
@@ -455,7 +496,7 @@ FINAL REMINDER:
         name=os.getenv("RAGFLOW_ASSISTANT_NAME", "RCSB ChatBot v2"),
         dataset_name=os.getenv("RAGFLOW_DATASET_NAME", "rcsb_pdb_knowledge_base"),
         system_prompt=os.getenv("RAGFLOW_SYSTEM_PROMPT", default_prompt),
-        model_name=os.getenv("RAGFLOW_MODEL_NAME", "gpt-4-turbo"),
+        model_name=os.getenv("RAGFLOW_MODEL_NAME", "gpt-4.1"),
         temperature=float(os.getenv("RAGFLOW_TEMPERATURE", "0.1")),
         top_p=float(os.getenv("RAGFLOW_TOP_P", "0.3")),
         presence_penalty=float(os.getenv("RAGFLOW_PRESENCE_PENALTY", "0.2")),
@@ -473,31 +514,31 @@ if __name__ == "__main__":
     # Test the assistant manager
     try:
         print("🧪 Testing RAGFlow Assistant Manager...")
-        
+
         # Create manager
         manager = create_assistant_manager()
         config = create_default_assistant_config()
-        
+
         # Health check
         health = manager.health_check()
         print(f"Health Status: {health}")
-        
+
         # Get or create assistant
         assistant_id = manager.get_or_create_assistant(config)
         print(f"Assistant ID: {assistant_id}")
-        
+
         # Create session
         session_id = manager.create_session(assistant_id, "Test Session")
         print(f"Session ID: {session_id}")
-        
+
         # Test message
         print("\n🤖 Testing message...")
         for response in manager.send_message(session_id, "Hello, what can you help me with?"):
             if response.is_complete:
                 print(f"Response: {response.content[:100]}...")
                 break
-        
+
         print("✅ All tests passed!")
-        
+
     except Exception as e:
         print(f"❌ Test failed: {e}")
