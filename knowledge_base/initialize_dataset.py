@@ -18,7 +18,7 @@ from dataclasses import dataclass
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 try:
-    from ragflow_simple_client import RAGFlowSimpleClient
+    from ragflow_sdk import RAGFlow
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError as e:
@@ -63,7 +63,7 @@ class KnowledgeBaseInitializer:
             base_url: RAGFlow base URL
             openai_key: OpenAI API key for GPT-4.1 and embeddings
         """
-        self.ragflow_client = RAGFlowSimpleClient(api_key, base_url)
+        self.ragflow_client = RAGFlow(api_key, base_url)
         self.openai_key = openai_key
         self.knowledge_base_dir = Path(__file__).parent
         self.config = DatasetConfig()
