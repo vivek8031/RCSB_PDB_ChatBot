@@ -89,21 +89,16 @@ class KnowledgeBaseInitializer:
 
     def create_optimal_dataset_config(self) -> Dict[str, Any]:
         """Create optimal dataset configuration for scientific documents"""
-        parser_config = {
-            "chunk_token_num": self.config.chunk_token_num,
-            "delimiter": "\\n",
-            "layout_recognize": self.config.layout_recognize,
-            "raptor": {
-                "use_raptor": self.config.use_raptor
-            }
-        }
-
+        # Note: parser_config is set to None to use defaults
+        # The paper chunk method will use its default configuration
+        # We can update parser_config after dataset creation if needed
+        
         return {
             "name": self.config.name,
             "description": self.config.description,
             "embedding_model": self.config.embedding_model,
             "chunk_method": self.config.chunk_method,
-            "parser_config": parser_config
+            "parser_config": None  # Use default parser config for paper method
         }
 
     def validate_environment(self) -> bool:
