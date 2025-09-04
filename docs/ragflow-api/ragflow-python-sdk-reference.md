@@ -8,9 +8,15 @@ The RAGFlow Python SDK provides a comprehensive API for interacting with RAGFlow
 
 - Manage datasets and documents
 - Create and configure chat assistants
+- **NEW**: Create and manage intelligent agents
 - Handle conversational AI interactions
 - Process and chunk documents
 - Manage user sessions and conversations
+
+**What's New in v0.20.4:**
+- Agent management system for more flexible AI interactions
+- Enhanced session handling for both assistants and agents
+- Improved configuration options and error handling
 
 ## Installation & Setup
 
@@ -93,6 +99,38 @@ get_chat(assistant_id: str) -> Assistant
 
 # Delete assistant
 delete_chat(assistant_id: str) -> bool
+```
+
+##### Agent Operations (New in v0.20.4)
+```python
+# Create agent
+create_agent(
+    name: str,
+    description: str = "",
+    llm: dict = None,
+    prompt: dict = None
+) -> Agent
+
+# List agents
+list_agents(
+    page: int = 1,
+    page_size: int = 30
+) -> List[Agent]
+
+# Get specific agent
+get_agent(agent_id: str) -> Agent
+
+# Update agent
+update_agent(
+    agent_id: str,
+    name: str = None,
+    description: str = None,
+    llm: dict = None,
+    prompt: dict = None
+) -> bool
+
+# Delete agent
+delete_agent(agent_id: str) -> bool
 ```
 
 ### 2. Dataset Class
@@ -185,12 +223,44 @@ update(
 delete() -> bool
 ```
 
-### 5. Session Class
+### 5. Agent Class (New in v0.20.4)
+
+#### Properties
+- `id`: Agent unique identifier
+- `name`: Agent name
+- `description`: Agent description
+- `llm_setting`: Language model configuration
+- `prompt_config`: Prompt template configuration
+
+#### Methods
+```python
+# Create new agent session
+create_session() -> Session
+
+# List existing agent sessions
+list_sessions(
+    page: int = 1,
+    page_size: int = 30
+) -> List[Session]
+
+# Update agent configuration
+update(
+    name: str = None,
+    description: str = None,
+    llm: dict = None,
+    prompt: dict = None
+) -> bool
+
+# Delete agent
+delete() -> bool
+```
+
+### 6. Session Class
 
 #### Properties
 - `id`: Session unique identifier
 - `name`: Session name
-- `assistant_id`: Associated assistant ID
+- `assistant_id`: Associated assistant ID (or agent_id for agent sessions)
 - `message_count`: Number of messages in session
 
 #### Methods
@@ -247,7 +317,7 @@ prompt_config = {
 
 ## Usage Examples
 
-### Complete Workflow Example
+### Complete Workflow Example (Assistant-based)
 ```python
 from ragflow_sdk import RAGFlow
 
@@ -279,6 +349,36 @@ for chunk in session.ask("What is this document about?"):
     if chunk.get("retcode") == 0:
         answer = chunk.get("data", {}).get("answer", "")
         print(answer, end="", flush=True)
+```
+
+### Agent-based Workflow Example (New)
+```python
+from ragflow_sdk import RAGFlow
+
+# Initialize client
+rag = RAGFlow(api_key="your-key", base_url="http://localhost:9380")
+
+# Create agent (more flexible than assistants)
+agent = rag.create_agent(
+    name="Research Agent",
+    description="Specialized in research tasks",
+    llm={"temperature": 0.2, "model_name": "gpt-4"}
+)
+
+# Start agent session
+session = agent.create_session()
+
+# Interact with agent
+for chunk in session.ask("Help me analyze this research paper"):
+    if chunk.get("retcode") == 0:
+        answer = chunk.get("data", {}).get("answer", "")
+        print(answer, end="", flush=True)
+
+# Agents can be updated dynamically
+agent.update(
+    description="Updated to handle complex analysis",
+    llm={"temperature": 0.1}
+)
 ```
 
 ### Error Handling
@@ -395,6 +495,11 @@ The current implementation uses:
 - **Assistant**: "RCSB ChatBot v2" 
 - **Sessions**: User-specific with unique IDs
 - **Streaming**: Real-time response display
+
+**Potential Agent Integration:**
+- Agents could provide more specialized responses for different research areas
+- Dynamic agent updating for different protein structure tasks
+- Multiple agents for different expertise areas (crystallography, NMR, etc.)
 
 ### Version Compatibility
 - **SDK Version**: 0.19.0+
