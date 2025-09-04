@@ -1,30 +1,38 @@
 version: '3.8'
 
+# RCSB PDB ChatBot - Universal Docker Compose
+# Works on any server with Docker - no modifications needed
+# Configure everything via .env file
+
 services:
   rcsb-pdb-chatbot:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        APP_PORT: ${APP_PORT:-8501}
     container_name: rcsb_pdb_chatbot
     ports:
-      - "3002:3002"  # Map to port 3002 for HAProxy integration
+      - "${APP_PORT:-8501}:${APP_PORT:-8501}"
     env_file:
-      - .env  # Use existing .env file with production values
+      - .env
+    environment:
+      # Streamlit configuration from environment variables
+      - STREAMLIT_SERVER_PORT=${APP_PORT:-8501}
+      - STREAMLIT_SERVER_ADDRESS=${APP_HOST:-0.0.0.0}
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./user_data:/app/user_data  # Persist user session data
+      # Mount user data directory for persistence
+      - "${USER_DATA_DIR:-./user_data}:/app/user_data"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3002/_stcore/health"]
+      test: ["CMD", "curl", "--fail", "http://localhost:${APP_PORT:-8501}/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    environment:
-      - PYTHONUNBUFFERED=1
-      - STREAMLIT_SERVER_PORT=3002
-      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
-      - STREAMLIT_SERVER_HEADLESS=true
-      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
     networks:
       - rcsb-network
 

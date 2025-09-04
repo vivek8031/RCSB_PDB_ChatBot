@@ -10,20 +10,20 @@ This is a multi-user research chatbot for RCSB PDB (Protein Data Bank) built wit
 
 ### Core Components
 
-**Main Application** (`rcsb_pdb_chatbot.py`)
+**Main Application** (`src/rcsb_pdb_chatbot.py`)
 - Streamlit-based web interface
 - Multi-user authentication and session management
 - Chat creation, switching, and management
 - Real-time streaming responses from RAGFlow
 - Message persistence and export functionality
 
-**User Session Manager** (`user_session_manager.py`) 
+**User Session Manager** (`src/user_session_manager.py`) 
 - Handles user authentication and session isolation
 - Manages multiple chats per user with unique RAGFlow session IDs
 - Provides message storage/retrieval with JSON persistence
 - Ensures complete data isolation between users
 
-**RAGFlow Client** (`ragflow_simple_client.py`)
+**RAGFlow Client** (`src/ragflow_simple_client.py`)
 - Simplified wrapper around RAGFlow SDK
 - Manages streaming responses and API communication
 - Handles error management and connection to RAGFlow assistant
@@ -43,8 +43,8 @@ This is a multi-user research chatbot for RCSB PDB (Protein Data Bank) built wit
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the application
-streamlit run rcsb_pdb_chatbot.py
+# Run the application (from project root)
+streamlit run src/rcsb_pdb_chatbot.py
 
 # Test with specific user
 # Navigate to app and login with research ID (e.g., "alice", "researcher_123")
@@ -52,36 +52,37 @@ streamlit run rcsb_pdb_chatbot.py
 
 ### Production Deployment
 
-**Recommended: Git-Based Deployment**
+**Universal Deployment (Any Server)**
 ```bash
-# Initial deployment (one-time setup)
-./deploy-git.sh
+# Clone and configure
+git clone <repo>
+cd RCSB_PDB_ChatBot
+cp .env.example .env
+# Edit .env with your RAGFlow settings
 
-# Update production after changes
-git push origin main
-./update-production.sh
+# Deploy anywhere
+./deploy.sh
 ```
 
-**Alternative: Docker Deployment**
+**Manual Docker Commands**
 ```bash
-# Build and run with Docker Compose
-docker-compose build
-docker-compose up -d
+# Build and run
+docker-compose up -d --build
 
 # Check health
-curl http://localhost:3002/_stcore/health
+curl http://localhost:8501/_stcore/health
 
 # View logs
-docker-compose logs -f rcsb-pdb-chatbot
+docker-compose logs -f
 ```
 
 ### Testing
 ```bash
 # Test RAGFlow connection
-python ragflow_simple_client.py
+python src/ragflow_simple_client.py
 
 # Test session management
-python user_session_manager.py
+python src/user_session_manager.py
 
 # Manual UI testing workflow:
 # 1. Login with test user ID
@@ -137,15 +138,16 @@ DEBUG_MODE=true
 
 ### Debugging Multi-User Issues
 1. Check `user_data/` directory for session files
-2. Verify RAGFlow session ID generation in `user_session_manager.py:130`
+2. Verify RAGFlow session ID generation in `src/user_session_manager.py:130`
 3. Test with different user IDs to ensure isolation
 4. Check Streamlit session state management
 
 ### Production Deployment Issues
-1. Use health check: `curl http://localhost:3002/_stcore/health`
-2. Check Docker logs: `docker-compose logs -f rcsb-pdb-chatbot`
-3. Verify .env configuration matches production RAGFlow instance
+1. Use health check: `curl http://localhost:8501/_stcore/health`
+2. Check Docker logs: `docker-compose logs -f`
+3. Verify .env configuration matches your RAGFlow instance
 4. Ensure `user_data/` directory permissions are correct
+5. Check port availability: `netstat -tlnp | grep 8501`
 
 ## Security Considerations
 
