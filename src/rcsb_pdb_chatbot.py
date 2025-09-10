@@ -42,6 +42,142 @@ def process_markdown_response(content: str) -> str:
     return content
 
 
+def display_message_feedback_ui(message: Dict[str, Any]):
+    """
+    Display feedback UI for an assistant message using Streamlit's built-in widgets
+    
+    Args:
+        message: Message dictionary containing role, content, timestamp, etc.
+    """
+    if message["role"] != "assistant":
+        return
+    
+    # Get message timestamp for unique identification
+    message_timestamp = message.get("timestamp")
+    if not message_timestamp:
+        # For backward compatibility, generate timestamp from content hash
+        import hashlib
+        content_hash = hashlib.md5(message["content"].encode()).hexdigest()[:8]
+        message_timestamp = f"legacy_{content_hash}"
+    
+    # Unique keys for widgets
+    feedback_key = f"feedback_{message_timestamp}"
+    comment_key = f"comment_{message_timestamp}"
+    expand_key = f"expand_comment_{message_timestamp}"
+    categories_key = f"categories_{message_timestamp}"
+    
+    # Check if feedback already exists
+    existing_feedback = None
+    if (st.session_state.current_user_id and 
+        st.session_state.current_chat_id and 
+        hasattr(st.session_state, 'session_manager')):
+        existing_feedback = st.session_state.session_manager.get_message_feedback(
+            st.session_state.current_user_id,
+            st.session_state.current_chat_id,
+            message_timestamp
+        )
+    
+    # Feedback section header
+    st.markdown("---")
+    
+    # Main feedback row
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        # Streamlit's built-in thumbs up/down feedback widget
+        current_rating = None
+        if existing_feedback:
+            current_rating = existing_feedback.get("rating")
+        
+        feedback_score = st.feedback(
+            "thumbs", 
+            key=feedback_key
+        )
+        
+        # Convert feedback score to our format
+        rating_value = None
+        if feedback_score == 1:
+            rating_value = "thumbs-up"
+        elif feedback_score == 0:
+            rating_value = "thumbs-down"
+    
+    with col2:
+        # Comment toggle button
+        if f"show_comment_{message_timestamp}" not in st.session_state:
+            st.session_state[f"show_comment_{message_timestamp}"] = False
+        
+        if st.button("💬 Comment", key=f"comment_btn_{message_timestamp}", help="Add optional comment"):
+            st.session_state[f"show_comment_{message_timestamp}"] = not st.session_state[f"show_comment_{message_timestamp}"]
+    
+    with col3:
+        # Save feedback button
+        save_feedback = st.button("💾 Save", key=f"save_{message_timestamp}", help="Save your feedback")
+    
+    # Expandable comment section
+    if st.session_state.get(f"show_comment_{message_timestamp}", False):
+        with st.container():
+            st.markdown("**Optional Feedback:**")
+            
+            # Categories
+            feedback_categories = st.multiselect(
+                "Select categories:",
+                options=["helpful", "accurate", "clear", "complete", "relevant", "confusing", "incorrect", "incomplete", "off-topic"],
+                default=existing_feedback.get("categories", []) if existing_feedback else [],
+                key=categories_key,
+                help="Choose categories that describe this response"
+            )
+            
+            # Text comment
+            comment_text = st.text_area(
+                "Your comment (optional):",
+                value=existing_feedback.get("comment", "") if existing_feedback else "",
+                key=comment_key,
+                help="Add any specific feedback about this response"
+            )
+    
+    # Save feedback when button is clicked
+    if save_feedback and rating_value is not None:
+        feedback_data = {
+            "rating": rating_value,
+            "feedback_timestamp": datetime.now().isoformat()
+        }
+        
+        # Add categories and comment if provided
+        if st.session_state.get(f"show_comment_{message_timestamp}", False):
+            if st.session_state.get(categories_key):
+                feedback_data["categories"] = st.session_state[categories_key]
+            if st.session_state.get(comment_key):
+                feedback_data["comment"] = st.session_state[comment_key]
+        
+        # Save to session manager
+        if (st.session_state.current_user_id and 
+            st.session_state.current_chat_id and 
+            hasattr(st.session_state, 'session_manager')):
+            
+            success = st.session_state.session_manager.add_message_feedback(
+                st.session_state.current_user_id,
+                st.session_state.current_chat_id,
+                message_timestamp,
+                feedback_data
+            )
+            
+            if success:
+                st.success("✅ Feedback saved!")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("❌ Failed to save feedback")
+    
+    elif save_feedback and rating_value is None:
+        st.warning("⚠️ Please select thumbs up or thumbs down first")
+    
+    # Show existing feedback summary
+    if existing_feedback:
+        st.caption(f"📊 Feedback: {existing_feedback.get('rating', 'N/A').replace('-', ' ').title()}" + 
+                  (f" | Categories: {', '.join(existing_feedback.get('categories', []))}" if existing_feedback.get('categories') else "") +
+                  (f" | Comment: {existing_feedback.get('comment', '')[:50]}{'...' if len(existing_feedback.get('comment', '')) > 50 else ''}" if existing_feedback.get('comment') else ""))
+
+
 def init_session_state():
     """Initialize Streamlit session state variables"""
     if "session_manager" not in st.session_state:
@@ -336,6 +472,10 @@ def display_main_interface():
                         # Add separator between references
                         if i < len(message["references"]):
                             st.divider()
+            
+            # Add feedback UI for assistant messages
+            if message["role"] == "assistant":
+                display_message_feedback_ui(message)
     
     # Chat input
     if prompt := st.chat_input("Ask about RCSB PDB, protein structures, or anything related..."):
@@ -399,6 +539,16 @@ def display_main_interface():
                             # Add separator between references
                             if i < len(references):
                                 st.divider()
+                
+                # Add feedback UI for the new assistant message
+                if full_response:
+                    new_message = {
+                        "role": "assistant",
+                        "content": full_response,
+                        "references": references,
+                        "timestamp": datetime.now().isoformat()  # Add timestamp for feedback
+                    }
+                    display_message_feedback_ui(new_message)
                 
             except Exception as e:
                 st.error(f"Error getting response: {e}")
