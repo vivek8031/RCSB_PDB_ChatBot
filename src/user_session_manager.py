@@ -44,6 +44,7 @@ class StoredMessage:
     content: str
     timestamp: datetime
     references: Optional[List[Dict]] = None
+    feedback: Optional[Dict[str, Any]] = None  # User feedback for this message
 
 
 @dataclass
@@ -434,6 +435,208 @@ class UserSessionManager:
         except Exception as e:
             print(f"❌ Failed to cleanup data for user {user_id}: {e}")
             return False
+    
+    # ================= FEEDBACK MANAGEMENT METHODS =================
+    
+    def add_message_feedback(self, user_id: str, chat_id: str, message_timestamp: str, feedback_data: Dict[str, Any]) -> bool:
+        """
+        Add feedback to a specific message
+        
+        Args:
+            user_id: User identifier
+            chat_id: Chat identifier
+            message_timestamp: Timestamp of the message (ISO format string)
+            feedback_data: Feedback dictionary with keys: rating, categories, comment, feedback_timestamp
+            
+        Returns:
+            True if feedback was added successfully, False otherwise
+        """
+        try:
+            user_chat = self.get_user_chat(user_id, chat_id)
+            if not user_chat:
+                print(f"❌ Chat {chat_id} not found for user {user_id}")
+                return False
+            
+            # Find the message by timestamp
+            target_message = None
+            for message in user_chat.messages:
+                if message.timestamp.isoformat() == message_timestamp:
+                    target_message = message
+                    break
+            
+            if not target_message:
+                print(f"❌ Message with timestamp {message_timestamp} not found")
+                return False
+            
+            # Add current timestamp if not provided
+            if "feedback_timestamp" not in feedback_data:
+                feedback_data["feedback_timestamp"] = datetime.now().isoformat()
+            
+            # Store feedback
+            target_message.feedback = feedback_data
+            
+            # Update chat timestamp
+            user_chat.updated_at = datetime.now()
+            
+            # Save updated user session
+            user_session = self.get_user_session(user_id)
+            self._save_user_sessions(user_session)
+            
+            print(f"✅ Added feedback to message {message_timestamp[:19]}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to add feedback: {e}")
+            return False
+    
+    def get_message_feedback(self, user_id: str, chat_id: str, message_timestamp: str) -> Optional[Dict[str, Any]]:
+        """
+        Get feedback for a specific message
+        
+        Args:
+            user_id: User identifier
+            chat_id: Chat identifier 
+            message_timestamp: Timestamp of the message (ISO format string)
+            
+        Returns:
+            Feedback dictionary or None if not found
+        """
+        try:
+            user_chat = self.get_user_chat(user_id, chat_id)
+            if not user_chat:
+                return None
+            
+            # Find the message by timestamp
+            for message in user_chat.messages:
+                if message.timestamp.isoformat() == message_timestamp:
+                    return message.feedback
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Failed to get feedback: {e}")
+            return None
+    
+    def update_message_feedback(self, user_id: str, chat_id: str, message_timestamp: str, feedback_data: Dict[str, Any]) -> bool:
+        """
+        Update existing feedback for a message
+        
+        Args:
+            user_id: User identifier
+            chat_id: Chat identifier
+            message_timestamp: Timestamp of the message (ISO format string)
+            feedback_data: Updated feedback dictionary
+            
+        Returns:
+            True if feedback was updated successfully, False otherwise
+        """
+        try:
+            # Use the same logic as add_message_feedback
+            return self.add_message_feedback(user_id, chat_id, message_timestamp, feedback_data)
+            
+        except Exception as e:
+            print(f"❌ Failed to update feedback: {e}")
+            return False
+    
+    def get_chat_feedback_summary(self, user_id: str, chat_id: str) -> Dict[str, Any]:
+        """
+        Get a summary of all feedback for a chat
+        
+        Args:
+            user_id: User identifier
+            chat_id: Chat identifier
+            
+        Returns:
+            Dictionary with feedback statistics
+        """
+        try:
+            user_chat = self.get_user_chat(user_id, chat_id)
+            if not user_chat:
+                return {}
+            
+            total_messages = len([msg for msg in user_chat.messages if msg.role == "assistant"])
+            feedback_count = len([msg for msg in user_chat.messages if msg.feedback is not None])
+            
+            positive_feedback = len([
+                msg for msg in user_chat.messages 
+                if msg.feedback and msg.feedback.get("rating") == "thumbs-up"
+            ])
+            
+            negative_feedback = len([
+                msg for msg in user_chat.messages 
+                if msg.feedback and msg.feedback.get("rating") == "thumbs-down"
+            ])
+            
+            # Collect all categories
+            all_categories = []
+            for msg in user_chat.messages:
+                if msg.feedback and msg.feedback.get("categories"):
+                    all_categories.extend(msg.feedback["categories"])
+            
+            # Count category occurrences
+            category_counts = {}
+            for category in all_categories:
+                category_counts[category] = category_counts.get(category, 0) + 1
+            
+            return {
+                "total_assistant_messages": total_messages,
+                "messages_with_feedback": feedback_count,
+                "feedback_rate": feedback_count / total_messages if total_messages > 0 else 0,
+                "positive_feedback": positive_feedback,
+                "negative_feedback": negative_feedback,
+                "category_counts": category_counts,
+                "most_common_categories": sorted(category_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            }
+            
+        except Exception as e:
+            print(f"❌ Failed to get feedback summary: {e}")
+            return {}
+    
+    def export_chat_with_feedback(self, user_id: str, chat_id: str) -> Dict[str, Any]:
+        """
+        Export chat data including all feedback for analysis
+        
+        Args:
+            user_id: User identifier
+            chat_id: Chat identifier
+            
+        Returns:
+            Dictionary with complete chat data and feedback
+        """
+        try:
+            user_chat = self.get_user_chat(user_id, chat_id)
+            if not user_chat:
+                return {}
+            
+            # Convert chat to dictionary with feedback included
+            chat_data = {
+                "user_id": user_id,
+                "chat_id": chat_id,
+                "title": user_chat.title,
+                "created_at": user_chat.created_at.isoformat(),
+                "updated_at": user_chat.updated_at.isoformat(),
+                "message_count": user_chat.message_count,
+                "messages": []
+            }
+            
+            for message in user_chat.messages:
+                message_data = {
+                    "role": message.role,
+                    "content": message.content,
+                    "timestamp": message.timestamp.isoformat(),
+                    "references": message.references,
+                    "feedback": message.feedback
+                }
+                chat_data["messages"].append(message_data)
+            
+            # Add feedback summary
+            chat_data["feedback_summary"] = self.get_chat_feedback_summary(user_id, chat_id)
+            
+            return chat_data
+            
+        except Exception as e:
+            print(f"❌ Failed to export chat with feedback: {e}")
+            return {}
 
 
 def create_manager() -> UserSessionManager:
