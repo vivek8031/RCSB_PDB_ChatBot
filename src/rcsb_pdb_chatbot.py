@@ -194,6 +194,9 @@ def init_session_state():
     
     if "show_references" not in st.session_state:
         st.session_state.show_references = False
+    
+    if "editor_mode" not in st.session_state:
+        st.session_state.editor_mode = False
 
 
 def load_chat_messages():
@@ -380,8 +383,147 @@ def chat_management():
         return None
 
 
+def display_fullscreen_prompt_editor():
+    """Display full-screen prompt editor in the main area"""
+    if not hasattr(st.session_state.session_manager, 'assistant_config'):
+        st.error("❌ Assistant configuration not available")
+        return
+    
+    config = st.session_state.session_manager.assistant_config
+    
+    # Header with navigation and info
+    col_nav, col_info, col_actions = st.columns([2, 2, 1])
+    
+    with col_nav:
+        st.markdown("# 🖥️ Full-Screen Prompt Editor")
+    
+    with col_info:
+        st.metric("Character Count", len(config.system_prompt))
+    
+    with col_actions:
+        if st.button("↩️ Back to Chat", type="secondary", use_container_width=True):
+            st.session_state.editor_mode = False
+            st.rerun()
+    
+    st.divider()
+    
+    # Full-screen editor with custom styling
+    st.markdown("""
+    <style>
+    .fullscreen-editor .stTextArea > div > div > textarea {
+        font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 16px;
+    }
+    .fullscreen-editor .stTextArea > div > div > textarea:focus {
+        border-color: #1976d2;
+        box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Main editor area
+    with st.container():
+        st.markdown('<div class="fullscreen-editor">', unsafe_allow_html=True)
+        
+        new_prompt = st.text_area(
+            "System Prompt Content",
+            value=config.system_prompt,
+            height=500,  # Much larger height for full-screen
+            help="Edit your system prompt with full screen real estate. Use monospace font for better readability.",
+            key="fullscreen_prompt_editor",
+            label_visibility="collapsed"
+        )
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Action buttons at the bottom
+    st.divider()
+    
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
+    
+    with col1:
+        if st.button("💾 Save Changes", type="primary", use_container_width=True):
+            if new_prompt.strip() and new_prompt != config.system_prompt:
+                with st.spinner("Updating assistant prompt..."):
+                    success = st.session_state.session_manager.assistant_manager.update_prompt(new_prompt.strip())
+                    if success:
+                        st.session_state.session_manager.assistant_config.system_prompt = new_prompt.strip()
+                        st.success("✅ Prompt updated successfully!")
+                        time.sleep(1.5)
+                        st.session_state.editor_mode = False  # Return to chat after saving
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to update prompt")
+            elif new_prompt == config.system_prompt:
+                st.info("ℹ️ No changes detected")
+            else:
+                st.error("❌ Prompt cannot be empty")
+    
+    with col2:
+        if st.button("↺ Reset to Default", use_container_width=True):
+            from ragflow_assistant_manager import create_default_assistant_config
+            default_config = create_default_assistant_config()
+            # Reset the assistant prompt directly instead of modifying session state
+            success = st.session_state.session_manager.assistant_manager.update_prompt(default_config.system_prompt)
+            if success:
+                st.session_state.session_manager.assistant_config.system_prompt = default_config.system_prompt
+                st.success("✅ Reset to default prompt!")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("❌ Failed to reset prompt")
+    
+    with col3:
+        if st.button("📋 Copy to Clipboard", use_container_width=True):
+            # JavaScript copy functionality
+            st.write("📋 Use Ctrl+A, Ctrl+C to copy the prompt text")
+    
+    with col4:
+        if st.button("🔍 Check Health", use_container_width=True):
+            with st.spinner("Checking RAGFlow connection..."):
+                health = st.session_state.session_manager.assistant_manager.health_check()
+                if all(health.values()):
+                    st.success("✅ All systems operational")
+                else:
+                    st.warning(f"⚠️ Issues detected: {health}")
+    
+    with col5:
+        # Info panel
+        st.info("💡 **Tip**: Use this full-screen editor for comfortable editing of long prompts. Changes are saved to RAGFlow immediately.")
+    
+    # Additional tools section
+    with st.expander("📊 Prompt Analysis", expanded=False):
+        col_analysis1, col_analysis2, col_analysis3 = st.columns(3)
+        
+        with col_analysis1:
+            lines = len(new_prompt.split('\n'))
+            st.metric("Lines", lines)
+        
+        with col_analysis2:
+            words = len(new_prompt.split())
+            st.metric("Words", words)
+        
+        with col_analysis3:
+            # Simple readability info
+            avg_line_length = len(new_prompt) / max(lines, 1)
+            st.metric("Avg Line Length", f"{avg_line_length:.0f}")
+        
+        # Static guidance
+        st.info("💡 **Editing Tips**: Keep lines under 100 characters for readability. Use clear section headers with ## markdown.")
+
+
 def display_main_interface():
-    """Display the main chat interface"""
+    """Display the main chat interface or full-screen prompt editor"""
+    
+    # Check if we're in editor mode
+    if st.session_state.get("editor_mode", False):
+        display_fullscreen_prompt_editor()
+        return
+    
     if not st.session_state.current_user_id:
         st.markdown("""
         # 🧬 RCSB PDB ChatBot
@@ -598,15 +740,21 @@ def sidebar_settings():
                     
                     st.markdown("**System Prompt Editor:**")
                     
-                    # Compact header with character count
-                    st.caption(f"📝 Current length: {len(config.system_prompt)} characters")
+                    # Compact header with character count and full-screen option
+                    col_header, col_fullscreen = st.columns([2, 1])
+                    with col_header:
+                        st.caption(f"📝 Current length: {len(config.system_prompt)} characters")
+                    with col_fullscreen:
+                        if st.button("🖥️ Full Screen", key="fullscreen_edit", use_container_width=True, help="Open full-screen editor"):
+                            st.session_state.editor_mode = True
+                            st.rerun()
                     
                     # Single text area that shows current prompt for editing
                     new_prompt = st.text_area(
                         "Prompt Content:",
                         value=config.system_prompt,
                         height=250,
-                        help="Modify the system prompt and save changes",
+                        help="Modify the system prompt and save changes (or use Full Screen for better editing)",
                         key="prompt_editor",
                         label_visibility="collapsed"
                     )
@@ -633,10 +781,20 @@ def sidebar_settings():
                     
                     with col_reset:
                         if st.button("↺ Reset", use_container_width=True):
-                            from ragflow_assistant_manager import create_default_assistant_config
-                            default_config = create_default_assistant_config()
-                            st.session_state["prompt_editor"] = default_config.system_prompt
-                            st.rerun()
+                            # Show warning instead of directly modifying
+                            st.warning("⚠️ Reset will restore default prompt. Save current changes first!")
+                            if st.button("✅ Confirm Reset", key="confirm_reset_sidebar"):
+                                from ragflow_assistant_manager import create_default_assistant_config
+                                default_config = create_default_assistant_config()
+                                # Reset the assistant prompt directly without session state
+                                success = st.session_state.session_manager.assistant_manager.update_prompt(default_config.system_prompt)
+                                if success:
+                                    st.session_state.session_manager.assistant_config.system_prompt = default_config.system_prompt
+                                    st.success("✅ Reset to default!")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Reset failed")
                     
                     with col_health:
                         if st.button("🔍 Health", use_container_width=True):
