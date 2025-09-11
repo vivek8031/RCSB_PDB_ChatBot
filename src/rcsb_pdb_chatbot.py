@@ -571,81 +571,86 @@ def sidebar_settings():
     # Advanced settings (only in debug mode)
     if os.getenv("DEBUG_MODE", "false").lower() == "true":
         with st.sidebar.expander("🔧 Advanced Settings"):
-            st.markdown("**Assistant Configuration:**")
             
-            # Show current assistant config
-            if hasattr(st.session_state.session_manager, 'assistant_config'):
-                config = st.session_state.session_manager.assistant_config
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Temperature", f"{config.temperature:.1f}")
-                    st.metric("Top-P", f"{config.top_p:.1f}")
-                with col2:
-                    st.metric("Top-N", config.top_n)
-                    st.metric("Similarity", f"{config.similarity_threshold:.1f}")
-                
-                # Interactive Prompt Editor
-                st.markdown("**System Prompt Editor:**")
-                st.caption(f"Current prompt length: {len(config.system_prompt)} characters")
-                
-                # Toggle button to show/hide current prompt
-                if "show_current_prompt" not in st.session_state:
-                    st.session_state.show_current_prompt = False
+            # Configuration metrics (optional - controlled by env var)
+            if os.getenv("SHOW_CONFIG_METRICS", "false").lower() == "true":
+                if hasattr(st.session_state.session_manager, 'assistant_config'):
+                    config = st.session_state.session_manager.assistant_config
                     
-                if st.button("👁️ Show/Hide Current Prompt", key="toggle_prompt_view"):
-                    st.session_state.show_current_prompt = not st.session_state.show_current_prompt
-                
-                # Show current prompt if toggled on
-                if st.session_state.show_current_prompt:
-                    st.markdown("**Current System Prompt:**")
-                    st.code(config.system_prompt, language="text")
-                
-                # Prompt editor
-                new_prompt = st.text_area(
-                    "Edit System Prompt:",
-                    value=config.system_prompt,
-                    height=300,
-                    help="Edit the system prompt and click 'Update Prompt' to apply changes",
-                    key="prompt_editor"
-                )
-                
-                # Update prompt button
-                col_update, col_reset = st.columns(2)
-                with col_update:
-                    if st.button("🔄 Update Prompt", type="primary"):
-                        if new_prompt.strip() and new_prompt != config.system_prompt:
-                            with st.spinner("Updating assistant prompt..."):
-                                success = st.session_state.session_manager.assistant_manager.update_prompt(new_prompt.strip())
-                                if success:
-                                    # Update the config in session state
-                                    st.session_state.session_manager.assistant_config.system_prompt = new_prompt.strip()
-                                    st.success("✅ Prompt updated successfully!")
-                                    st.rerun()
+                    st.markdown("**Assistant Configuration:**")
+                    
+                    # Compact metrics display using containers
+                    with st.container():
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("Temperature", f"{config.temperature:.1f}")
+                            st.metric("Top-P", f"{config.top_p:.1f}")
+                        with col2:
+                            st.metric("Top-N", config.top_n)
+                            st.metric("Similarity", f"{config.similarity_threshold:.1f}")
+                    
+                    st.divider()
+            
+            # System Prompt Editor (controlled by env var)
+            if os.getenv("SHOW_PROMPT_EDITOR", "false").lower() == "true":
+                if hasattr(st.session_state.session_manager, 'assistant_config'):
+                    config = st.session_state.session_manager.assistant_config
+                    
+                    st.markdown("**System Prompt Editor:**")
+                    
+                    # Compact header with character count
+                    st.caption(f"📝 Current length: {len(config.system_prompt)} characters")
+                    
+                    # Single text area that shows current prompt for editing
+                    new_prompt = st.text_area(
+                        "Prompt Content:",
+                        value=config.system_prompt,
+                        height=250,
+                        help="Modify the system prompt and save changes",
+                        key="prompt_editor",
+                        label_visibility="collapsed"
+                    )
+                    
+                    # Action buttons in horizontal layout
+                    col_update, col_reset, col_health = st.columns(3)
+                    
+                    with col_update:
+                        if st.button("💾 Save", type="primary", use_container_width=True):
+                            if new_prompt.strip() and new_prompt != config.system_prompt:
+                                with st.spinner("Updating..."):
+                                    success = st.session_state.session_manager.assistant_manager.update_prompt(new_prompt.strip())
+                                    if success:
+                                        st.session_state.session_manager.assistant_config.system_prompt = new_prompt.strip()
+                                        st.success("✅ Updated!")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Failed")
+                            elif new_prompt == config.system_prompt:
+                                st.info("No changes")
+                            else:
+                                st.error("Cannot be empty")
+                    
+                    with col_reset:
+                        if st.button("↺ Reset", use_container_width=True):
+                            from ragflow_assistant_manager import create_default_assistant_config
+                            default_config = create_default_assistant_config()
+                            st.session_state["prompt_editor"] = default_config.system_prompt
+                            st.rerun()
+                    
+                    with col_health:
+                        if st.button("🔍 Health", use_container_width=True):
+                            with st.spinner("Checking..."):
+                                health = st.session_state.session_manager.assistant_manager.health_check()
+                                if all(health.values()):
+                                    st.success("✅ OK")
                                 else:
-                                    st.error("❌ Failed to update prompt")
-                        elif new_prompt == config.system_prompt:
-                            st.info("No changes detected in prompt")
-                        else:
-                            st.error("Prompt cannot be empty")
-                
-                with col_reset:
-                    if st.button("↺ Reset to Default"):
-                        from ragflow_assistant_manager import create_default_assistant_config
-                        default_config = create_default_assistant_config()
-                        st.session_state["prompt_editor"] = default_config.system_prompt
-                        st.rerun()
-                
-                st.divider()
-                
-                # Assistant health check
-                if st.button("🔍 Check Assistant Health"):
-                    with st.spinner("Checking RAGFlow connection..."):
-                        health = st.session_state.session_manager.assistant_manager.health_check()
-                        if all(health.values()):
-                            st.success("✅ All systems operational")
-                        else:
-                            st.warning(f"⚠️ Issues detected: {health}")
+                                    st.warning("⚠️ Issues")
+            
+            # Show helpful message if nothing is enabled
+            if (os.getenv("SHOW_CONFIG_METRICS", "false").lower() == "false" and 
+                os.getenv("SHOW_PROMPT_EDITOR", "false").lower() == "false"):
+                st.info("💡 Enable specific debug features in .env file:\n- SHOW_CONFIG_METRICS=true\n- SHOW_PROMPT_EDITOR=true")
     
     # Export functionality
     if st.sidebar.button("📤 Export Current Chat"):
