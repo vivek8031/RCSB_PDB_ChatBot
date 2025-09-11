@@ -31,11 +31,11 @@ except ImportError:
     sys.exit(1)
 
 try:
-    from .test_cases import UserFeedbackTestSuite, TestCase, Severity, FeedbackCategory
+    from .test_cases import UserFeedbackTestSuite, TestCase, Severity, FeedbackCategory, ContextTestCase
     from .crewai_evaluators import create_evaluator, EvaluationResult
 except ImportError:
     # For direct execution
-    from test_cases import UserFeedbackTestSuite, TestCase, Severity, FeedbackCategory
+    from test_cases import UserFeedbackTestSuite, TestCase, Severity, FeedbackCategory, ContextTestCase
     from crewai_evaluators import create_evaluator, EvaluationResult
 
 # Import session manager
@@ -114,10 +114,11 @@ class RichTestFramework:
         welcome_panel = Panel(
             f"""[green]Automated Testing System for User Feedback Validation[/green]
             
-📋 Test Suite: {len(self.test_suite.test_cases)} test cases
+📋 Test Suite: {len(self.test_suite.test_cases)} regular test cases + {len(self.test_suite.context_test_cases)} context tests
 🤖 Evaluators: CrewAI agents + Rule-based fallback
 📊 Categories: {len(set(tc.category for tc in self.test_suite.test_cases))} feedback categories
 ⚖️ Severity levels: Critical, High, Medium, Low
+🔗 Context Tests: Multi-turn conversation continuity validation
 
 [dim]Ready to systematically validate chatbot improvements against user feedback.[/dim]""",
             title=title,
@@ -144,7 +145,8 @@ class RichTestFramework:
             "references": "Citation formatting quality",
             "depositor_focus": "User-appropriate guidance",
             "completeness": "Information completeness",
-            "internal_instructions": "Internal process filtering"
+            "internal_instructions": "Internal process filtering",
+            "context_continuity": "Multi-turn conversation context retention"
         }
         
         for category, count in summary['by_category'].items():
@@ -290,6 +292,183 @@ class RichTestFramework:
                 time.sleep(0.1)
         
         return self.current_test_results
+    
+    def run_context_test(self, context_test: ContextTestCase) -> Dict[str, Any]:
+        """
+        Run a single context continuity test with multiple messages
+        
+        Args:
+            context_test: ContextTestCase with multiple questions
+            
+        Returns:
+            Context test result dictionary
+        """
+        if not self.session_manager or not self.test_chat_id:
+            return {
+                'test_id': context_test.id,
+                'test_type': 'context',
+                'error': 'Session manager not initialized',
+                'passed': False,
+                'execution_time': 0.0
+            }
+        
+        start_time = time.time()
+        conversation_responses = []
+        
+        try:
+            # Send each question in sequence and collect responses
+            for i, question in enumerate(context_test.questions):
+                self.console.print(f"[dim]  Q{i+1}: {question}")
+                
+                # Collect full response from streaming
+                full_response = ""
+                for message in self.session_manager.send_message_to_chat(
+                    self.test_user_id, self.test_chat_id, question
+                ):
+                    if message.role == "assistant":
+                        full_response = message.content
+                
+                conversation_responses.append(full_response)
+                self.console.print(f"[dim]  A{i+1}: {full_response[:100]}...")
+                
+                # Small delay between questions for realistic conversation flow
+                time.sleep(1)
+            
+            # Evaluate context continuity using CrewAI
+            evaluation_results = self.evaluator.evaluate_context_continuity(
+                context_test, conversation_responses
+            )
+            
+            execution_time = time.time() - start_time
+            
+            # Process evaluation results
+            question_scores = []
+            total_score = 0
+            all_passed = True
+            issues_found = []
+            recommendations = []
+            
+            for eval_result in evaluation_results:
+                question_scores.append({
+                    'question_number': eval_result.details.get('question_number', 0),
+                    'score': eval_result.score,
+                    'passed': eval_result.passed,
+                    'issues': eval_result.issues_found,
+                    'recommendations': eval_result.recommendations
+                })
+                
+                total_score += eval_result.score
+                if not eval_result.passed:
+                    all_passed = False
+                
+                issues_found.extend(eval_result.issues_found)
+                recommendations.extend(eval_result.recommendations)
+            
+            avg_score = total_score / len(evaluation_results) if evaluation_results else 0
+            
+            return {
+                'test_id': context_test.id,
+                'test_type': 'context',
+                'category': context_test.category.value,
+                'severity': context_test.severity.value,
+                'user_source': context_test.user_source,
+                'description': context_test.description,
+                'questions': context_test.questions,
+                'responses': conversation_responses,
+                'question_scores': question_scores,
+                'overall_score': avg_score,
+                'overall_passed': all_passed,
+                'issues_found': issues_found,
+                'recommendations': recommendations,
+                'execution_time': execution_time,
+                'context_expectations': context_test.context_expectations,
+                'evaluation_details': [
+                    {
+                        'agent': er.agent_name,
+                        'score': er.score,
+                        'raw_result': er.details.get('raw_result', '')
+                    } for er in evaluation_results
+                ]
+            }
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            self.console.print(f"[red]❌ Context test failed: {e}")
+            
+            return {
+                'test_id': context_test.id,
+                'test_type': 'context',
+                'error': str(e),
+                'passed': False,
+                'execution_time': execution_time,
+                'questions': context_test.questions,
+                'responses': conversation_responses
+            }
+    
+    def run_context_test_suite(self, test_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Run all context continuity tests
+        
+        Args:
+            test_filter: Optional filter for specific test IDs or categories
+            
+        Returns:
+            List of context test results
+        """
+        context_tests = self.test_suite.get_context_tests()
+        
+        # Apply filter if provided
+        if test_filter:
+            context_tests = [
+                test for test in context_tests 
+                if (test_filter.lower() in test.id.lower() or 
+                    test_filter.lower() in test.category.value.lower() or
+                    test_filter.lower() in test.user_source.lower())
+            ]
+        
+        if not context_tests:
+            self.console.print("[yellow]No context tests found matching filter criteria")
+            return []
+        
+        self.console.print(f"\n[bold blue]🔗 Running Context Continuity Tests[/bold blue]")
+        self.console.print(f"Found {len(context_tests)} context test cases")
+        
+        context_results = []
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            console=self.console
+        ) as progress:
+            
+            context_task = progress.add_task(
+                "Running context tests...", 
+                total=len(context_tests)
+            )
+            
+            for context_test in context_tests:
+                # Update task description
+                progress.update(
+                    context_task, 
+                    description=f"Testing {context_test.id}: {context_test.description[:50]}..."
+                )
+                
+                self.console.print(f"\n[cyan]▶ {context_test.id}: {context_test.description}")
+                self.console.print(f"[dim]  Questions: {len(context_test.questions)}, Severity: {context_test.severity.value}")
+                
+                # Run the context test
+                result = self.run_context_test(context_test)
+                context_results.append(result)
+                
+                # Update progress
+                progress.update(context_task, advance=1)
+                
+                # Brief pause for visual effect
+                time.sleep(0.5)
+        
+        return context_results
     
     def display_results_summary(self, results: List[Dict[str, Any]]):
         """Display comprehensive results summary with Rich formatting"""
@@ -476,14 +655,16 @@ class RichTestFramework:
         
         while True:
             self.console.print("\n[bold blue]🧪 Test Framework Menu[/bold blue]")
-            self.console.print("1. Run all tests")
+            self.console.print("1. Run all regular tests")
             self.console.print("2. Run critical tests only")
             self.console.print("3. Run tests by user feedback (Brian, Chenghua, etc.)")
-            self.console.print("4. View test suite summary")
-            self.console.print("5. View previous results")
-            self.console.print("6. Exit")
+            self.console.print("4. [blue]🔗 Run context continuity tests[/blue]")
+            self.console.print("5. [cyan]🔄 Run all tests (regular + context)[/cyan]")
+            self.console.print("6. View test suite summary")
+            self.console.print("7. View previous results")
+            self.console.print("8. Exit")
             
-            choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6"], default="1")
+            choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6", "7", "8"], default="1")
             
             if choice == "1":
                 results = self.run_test_suite()
@@ -505,12 +686,31 @@ class RichTestFramework:
                     self.save_results(results)
                     
             elif choice == "4":
+                context_results = self.run_context_test_suite()
+                self.display_results_summary(context_results)
+                if Confirm.ask("Save context test results?"):
+                    self.save_results(context_results, f"context_test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+                    
+            elif choice == "5":
+                # Run both regular and context tests
+                regular_results = self.run_test_suite()
+                context_results = self.run_context_test_suite()
+                all_results = regular_results + context_results
+                
+                self.console.print(f"\n[bold green]🎯 Combined Test Results[/bold green]")
+                self.console.print(f"Regular tests: {len(regular_results)}, Context tests: {len(context_results)}")
+                self.display_results_summary(all_results)
+                
+                if Confirm.ask("Save combined results?"):
+                    self.save_results(all_results, f"combined_test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+                    
+            elif choice == "6":
                 self.display_test_summary()
                 
-            elif choice == "5":
+            elif choice == "7":
                 self._view_previous_results()
                 
-            elif choice == "6":
+            elif choice == "8":
                 self.console.print("[green]👋 Goodbye!")
                 break
     

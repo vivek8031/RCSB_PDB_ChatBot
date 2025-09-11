@@ -23,10 +23,10 @@ except ImportError:
     pass
 
 try:
-    from .test_cases import TestCase, FeedbackCategory
+    from .test_cases import TestCase, FeedbackCategory, ContextTestCase
 except ImportError:
     # For direct execution
-    from test_cases import TestCase, FeedbackCategory
+    from test_cases import TestCase, FeedbackCategory, ContextTestCase
 
 @dataclass 
 class EvaluationResult:
@@ -118,12 +118,25 @@ class ChatBotEvaluationCrew:
             llm=self.llm
         )
         
+        # ContextContinuityEvaluator Agent
+        context_continuity = Agent(
+            role='Context Continuity Evaluator',
+            goal='Assess conversation context retention and evaluate follow-up question understanding',
+            backstory="""You are an expert in conversational AI evaluation. You assess whether 
+            responses demonstrate proper understanding of conversation context, pronoun resolution, 
+            topic continuity, and appropriate reference to previous messages in multi-turn conversations.""",
+            verbose=False,
+            allow_delegation=False,
+            llm=self.llm
+        )
+        
         return {
             'biocurator_detector': biocurator_detector,
             'redundancy_analyzer': redundancy_analyzer,
             'reference_formatter': reference_formatter, 
             'depositor_focus': depositor_focus,
-            'quality_scorer': quality_scorer
+            'quality_scorer': quality_scorer,
+            'context_continuity': context_continuity
         }
     
     def evaluate_response(self, test_case: TestCase, response: str) -> List[EvaluationResult]:
@@ -406,6 +419,190 @@ class ChatBotEvaluationCrew:
                 'raw_result': result_text,
                 'test_category': test_case.category.value,
                 'test_severity': test_case.severity.value
+            }
+        )
+    
+    def evaluate_context_continuity(self, context_test: ContextTestCase, conversation_history: List[str]) -> List[EvaluationResult]:
+        """
+        Evaluate context continuity across multiple messages in a conversation
+        
+        Args:
+            context_test: ContextTestCase with multiple questions
+            conversation_history: List of responses corresponding to each question
+            
+        Returns:
+            List of EvaluationResult objects for each response in the conversation
+        """
+        results = []
+        
+        if len(conversation_history) != len(context_test.questions):
+            # Return error if conversation history doesn't match questions
+            error_result = EvaluationResult(
+                agent_name="context_continuity",
+                test_case_id=context_test.id,
+                score=0,
+                passed=False,
+                issues_found=[f"Conversation length mismatch: {len(conversation_history)} responses vs {len(context_test.questions)} questions"],
+                recommendations=["Ensure all questions in context test are answered"],
+                execution_time=0.0,
+                details={"error": "conversation_length_mismatch"}
+            )
+            return [error_result]
+        
+        # Evaluate each response in the context of the conversation
+        for i, (question, response) in enumerate(zip(context_test.questions, conversation_history)):
+            try:
+                # Build conversation context for evaluation
+                conversation_context = ""
+                for j in range(i + 1):
+                    conversation_context += f"Q{j+1}: {context_test.questions[j]}\nA{j+1}: {conversation_history[j]}\n\n"
+                
+                # Create context continuity evaluation task
+                task = Task(
+                    description=f"""Evaluate context continuity for this multi-turn conversation:
+
+TEST CASE: {context_test.description}
+CONTEXT EXPECTATIONS: {', '.join(context_test.context_expectations)}
+FORBIDDEN RESPONSES: {', '.join(context_test.forbidden_responses)}
+REQUIRED RESPONSES: {', '.join(context_test.required_responses)}
+
+FULL CONVERSATION:
+{conversation_context}
+
+CURRENT QUESTION ({i+1}/{len(context_test.questions)}): {question}
+CURRENT RESPONSE TO EVALUATE: {response}
+
+Evaluate this response for:
+1. Context retention from previous messages (if applicable)
+2. Proper understanding of pronouns and references
+3. Topic continuity and coherence
+4. Appropriate use of previous conversation information
+5. Absence of context-loss indicators
+
+For Question 1, focus on initial response quality.
+For Questions 2+, heavily weight context continuity and reference resolution.
+
+Provide:
+- Context continuity score (0-100, where 100 = perfect context retention)
+- Specific examples of context retention or loss
+- Recommendations for improvement
+""",
+                    agent=self.agents['context_continuity'],
+                    expected_output="Context continuity score, specific examples, and recommendations"
+                )
+                
+                # Execute evaluation
+                task_start = datetime.now()
+                crew = Crew(
+                    agents=[self.agents['context_continuity']],
+                    tasks=[task],
+                    process=Process.sequential,
+                    verbose=False
+                )
+                
+                result = crew.kickoff()
+                execution_time = (datetime.now() - task_start).total_seconds()
+                
+                # Parse result into EvaluationResult
+                eval_result = self._parse_context_result(
+                    context_test.id, result, execution_time, context_test, 
+                    question, response, i + 1
+                )
+                results.append(eval_result)
+                
+            except Exception as e:
+                error_result = EvaluationResult(
+                    agent_name="context_continuity",
+                    test_case_id=context_test.id,
+                    score=0,
+                    passed=False,
+                    issues_found=[f"Context evaluation error for Q{i+1}: {str(e)}"],
+                    recommendations=["Review context evaluation setup"],
+                    execution_time=0.0,
+                    details={"error": str(e), "question_number": i + 1}
+                )
+                results.append(error_result)
+        
+        return results
+    
+    def _parse_context_result(self, test_case_id: str, raw_result: str, execution_time: float, 
+                            context_test: ContextTestCase, question: str, response: str, 
+                            question_number: int) -> EvaluationResult:
+        """Parse context evaluation result into structured EvaluationResult"""
+        
+        # Default values
+        score = 50
+        issues_found = []
+        recommendations = []
+        passed = True
+        
+        result_text = str(raw_result)
+        
+        try:
+            # Extract score using regex patterns
+            score_patterns = [
+                r'context.*?score[:\s]+(\d+)',
+                r'continuity.*?score[:\s]+(\d+)',
+                r'score[:\s]+(\d+)',
+                r'(\d+)/100',
+                r'(\d+)%'
+            ]
+            
+            for pattern in score_patterns:
+                match = re.search(pattern, result_text, re.IGNORECASE)
+                if match:
+                    score = int(match.group(1))
+                    break
+            
+            # Check for context loss indicators in the response
+            for forbidden in context_test.forbidden_responses:
+                if forbidden.lower() in response.lower():
+                    issues_found.append(f"Context loss indicator found: {forbidden}")
+                    passed = False
+                    score = max(0, score - 20)  # Penalty for context loss
+            
+            # Check for required context indicators
+            required_found = 0
+            for required in context_test.required_responses:
+                if required.lower() in response.lower():
+                    required_found += 1
+            
+            if context_test.required_responses:
+                context_coverage = required_found / len(context_test.required_responses)
+                if context_coverage < 0.5:
+                    issues_found.append(f"Low context coverage: {context_coverage:.1%}")
+                    passed = False
+            
+            # Adjust passed status based on score
+            if score < 70:
+                passed = False
+                
+            # Extract issues and recommendations from result text
+            if 'issue' in result_text.lower() or 'problem' in result_text.lower():
+                issues_found.append("Context issues identified by agent - see details")
+            
+            if 'recommend' in result_text.lower() or 'suggest' in result_text.lower():
+                recommendations.append("Context improvement recommendations provided - see details")
+                
+        except Exception as e:
+            issues_found.append(f"Error parsing context result: {str(e)}")
+            passed = False
+        
+        return EvaluationResult(
+            agent_name="context_continuity",
+            test_case_id=f"{test_case_id}_Q{question_number}",
+            score=max(0, min(100, score)),
+            passed=passed,
+            issues_found=issues_found,
+            recommendations=recommendations,
+            execution_time=execution_time,
+            details={
+                'raw_result': result_text,
+                'question_number': question_number,
+                'question': question,
+                'test_category': context_test.category.value,
+                'test_severity': context_test.severity.value,
+                'context_expectations': context_test.context_expectations
             }
         )
 

@@ -21,6 +21,7 @@ class FeedbackCategory(Enum):
     DEPOSITOR_FOCUS = "depositor_focus"
     COMPLETENESS = "completeness"
     INTERNAL_INSTRUCTIONS = "internal_instructions"
+    CONTEXT_CONTINUITY = "context_continuity"
 
 @dataclass
 class TestCase:
@@ -34,12 +35,26 @@ class TestCase:
     forbidden_content: List[str]  # Content that should NOT appear
     required_content: List[str]   # Content that SHOULD appear
     max_response_length: int = None  # For verbosity testing
+
+@dataclass
+class ContextTestCase:
+    """Represents a multi-message context continuity test case"""
+    id: str
+    questions: List[str]  # Sequence of questions for context testing
+    category: FeedbackCategory
+    severity: Severity
+    user_source: str
+    description: str
+    context_expectations: List[str]  # What context should be maintained
+    forbidden_responses: List[str]   # Responses indicating context loss
+    required_responses: List[str]    # Responses indicating context retention
     
 class UserFeedbackTestSuite:
     """Complete test suite based on user feedback"""
     
     def __init__(self):
         self.test_cases = self._initialize_test_cases()
+        self.context_test_cases = self._initialize_context_test_cases()
     
     def _initialize_test_cases(self) -> List[TestCase]:
         """Initialize all test cases based on user feedback"""
@@ -325,6 +340,176 @@ class UserFeedbackTestSuite:
             )
         ]
     
+    def _initialize_context_test_cases(self) -> List[ContextTestCase]:
+        """Initialize context continuity test cases"""
+        return [
+            # Basic Follow-up Context Test
+            ContextTestCase(
+                id="CONTEXT_001",
+                questions=[
+                    "What file formats are accepted for protein structure deposition?",
+                    "What about for NMR structures specifically?"
+                ],
+                category=FeedbackCategory.CONTEXT_CONTINUITY,
+                severity=Severity.HIGH,
+                user_source="Irina",
+                description="Test basic follow-up question context retention",
+                context_expectations=[
+                    "Remembers previous question about file formats",
+                    "Understands 'What about' refers to file formats",
+                    "Provides NMR-specific format information"
+                ],
+                forbidden_responses=[
+                    "What are you referring to?",
+                    "I don't understand the context",
+                    "Could you clarify your question?"
+                ],
+                required_responses=[
+                    "NMR", "format", "structure"
+                ]
+            ),
+            
+            # Pronoun Resolution Context Test
+            ContextTestCase(
+                id="CONTEXT_002", 
+                questions=[
+                    "What is the obsolete policy in the PDB?",
+                    "Can you explain that in more detail?",
+                    "What are the specific criteria for that?"
+                ],
+                category=FeedbackCategory.CONTEXT_CONTINUITY,
+                severity=Severity.CRITICAL,
+                user_source="Irina",
+                description="Test pronoun resolution and topic continuation",
+                context_expectations=[
+                    "Understands 'that' refers to obsolete policy",
+                    "Maintains topic focus across multiple questions",
+                    "Provides detailed obsolete policy information"
+                ],
+                forbidden_responses=[
+                    "What would you like me to explain?",
+                    "That refers to what?",
+                    "I'm not sure what you mean"
+                ],
+                required_responses=[
+                    "obsolete", "policy", "criteria", "entry"
+                ]
+            ),
+            
+            # Deposition Process Context Chain
+            ContextTestCase(
+                id="CONTEXT_003",
+                questions=[
+                    "How do I deposit a protein structure?",
+                    "What validation checks are performed during this process?", 
+                    "How long does that validation typically take?",
+                    "What happens if the validation fails?"
+                ],
+                category=FeedbackCategory.CONTEXT_CONTINUITY,
+                severity=Severity.HIGH,
+                user_source="General",
+                description="Test multi-step process context retention",
+                context_expectations=[
+                    "Links validation to deposition process",
+                    "Maintains deposition context across 4 questions",
+                    "Understands 'that validation' refers to previous topic"
+                ],
+                forbidden_responses=[
+                    "What process are you referring to?",
+                    "Validation for what?",
+                    "I need more context"
+                ],
+                required_responses=[
+                    "deposition", "validation", "structure", "process"
+                ]
+            ),
+            
+            # Complex Reference Context Test
+            ContextTestCase(
+                id="CONTEXT_004",
+                questions=[
+                    "I cannot find my deposition session when logged in with ORCID",
+                    "Is this a common issue?",
+                    "How can I resolve this specific problem?"
+                ],
+                category=FeedbackCategory.CONTEXT_CONTINUITY,
+                severity=Severity.CRITICAL,
+                user_source="Brian",
+                description="Test context retention for specific user problems",
+                context_expectations=[
+                    "Remembers ORCID login issue from first question",
+                    "Understands 'this issue' and 'this specific problem' refer to ORCID login",
+                    "Provides targeted solution for ORCID deposition access"
+                ],
+                forbidden_responses=[
+                    "What issue are you referring to?",
+                    "Which problem do you mean?",
+                    "Could you specify the issue?"
+                ],
+                required_responses=[
+                    "ORCID", "deposition", "session", "support"
+                ]
+            ),
+            
+            # Long Context Chain Test (5+ questions)
+            ContextTestCase(
+                id="CONTEXT_005",
+                questions=[
+                    "What is group deposition for multiple similar structures?",
+                    "How many structures can I submit in one group?",
+                    "Do I need to enter experimental information for each one?",
+                    "What if some structures have different ligands?",
+                    "How does the validation work for these batch submissions?",
+                    "Can I modify individual structures after group submission?"
+                ],
+                category=FeedbackCategory.CONTEXT_CONTINUITY,
+                severity=Severity.MEDIUM,
+                user_source="Gregg", 
+                description="Test long conversation context limits",
+                context_expectations=[
+                    "Maintains group deposition topic throughout 6 questions",
+                    "Understands references to 'these', 'individual structures'", 
+                    "Connects validation to group deposition context"
+                ],
+                forbidden_responses=[
+                    "What submissions are you referring to?",
+                    "Individual structures for what?",
+                    "Context unclear"
+                ],
+                required_responses=[
+                    "group", "deposition", "structures", "batch"
+                ]
+            ),
+            
+            # Context Switching Test
+            ContextTestCase(
+                id="CONTEXT_006",
+                questions=[
+                    "How do I upload coordinate files?",
+                    "What about sequence files?", 
+                    "Going back to coordinates, what formats are supported?",
+                    "And for those coordinate formats, which is recommended?"
+                ],
+                category=FeedbackCategory.CONTEXT_CONTINUITY,
+                severity=Severity.MEDIUM,
+                user_source="General",
+                description="Test context switching and return to previous topics",
+                context_expectations=[
+                    "Switches from coordinates to sequences",
+                    "Returns to coordinate topic when prompted",
+                    "Maintains both contexts appropriately"
+                ],
+                forbidden_responses=[
+                    "Which formats are you asking about?",
+                    "Coordinate formats for what?",
+                    "Lost context"
+                ],
+                required_responses=[
+                    "coordinate", "format", "PDBx", "mmCIF"
+                ]
+            )
+        ]
+    
     def get_tests_by_category(self, category: FeedbackCategory) -> List[TestCase]:
         """Get all test cases for a specific category"""
         return [test for test in self.test_cases if test.category == category]
@@ -341,14 +526,38 @@ class UserFeedbackTestSuite:
         """Get all critical severity test cases"""
         return self.get_tests_by_severity(Severity.CRITICAL)
     
+    def get_context_tests(self) -> List[ContextTestCase]:
+        """Get all context continuity test cases"""
+        return self.context_test_cases
+    
+    def get_context_tests_by_severity(self, severity: Severity) -> List[ContextTestCase]:
+        """Get context test cases for a specific severity level"""
+        return [test for test in self.context_test_cases if test.severity == severity]
+    
     def get_test_summary(self) -> Dict[str, Any]:
         """Get summary statistics of the test suite"""
         total_tests = len(self.test_cases)
+        total_context_tests = len(self.context_test_cases)
         by_category = {}
         by_severity = {}
         by_user = {}
         
+        # Regular test cases
         for test in self.test_cases:
+            # Count by category
+            cat_name = test.category.value
+            by_category[cat_name] = by_category.get(cat_name, 0) + 1
+            
+            # Count by severity  
+            sev_name = test.severity.value
+            by_severity[sev_name] = by_severity.get(sev_name, 0) + 1
+            
+            # Count by user
+            user = test.user_source
+            by_user[user] = by_user.get(user, 0) + 1
+        
+        # Context test cases
+        for test in self.context_test_cases:
             # Count by category
             cat_name = test.category.value
             by_category[cat_name] = by_category.get(cat_name, 0) + 1
@@ -363,6 +572,8 @@ class UserFeedbackTestSuite:
         
         return {
             "total_tests": total_tests,
+            "total_context_tests": total_context_tests,
+            "combined_total": total_tests + total_context_tests,
             "by_category": by_category,
             "by_severity": by_severity, 
             "by_user": by_user
@@ -372,10 +583,12 @@ class UserFeedbackTestSuite:
 if __name__ == "__main__":
     test_suite = UserFeedbackTestSuite()
     
-    print(f"Total test cases: {len(test_suite.test_cases)}")
+    print(f"Total regular test cases: {len(test_suite.test_cases)}")
+    print(f"Total context test cases: {len(test_suite.context_test_cases)}")
     print("\nTest Summary:")
     summary = test_suite.get_test_summary()
     
+    print(f"Combined Total: {summary['combined_total']}")
     print(f"By Category: {summary['by_category']}")
     print(f"By Severity: {summary['by_severity']}")
     print(f"By User: {summary['by_user']}")
@@ -383,3 +596,7 @@ if __name__ == "__main__":
     print("\nCritical Tests:")
     for test in test_suite.get_critical_tests():
         print(f"- {test.id}: {test.description}")
+    
+    print("\nContext Continuity Tests:")
+    for test in test_suite.get_context_tests():
+        print(f"- {test.id}: {test.description} ({len(test.questions)} questions)")
