@@ -14,3 +14,8 @@ python-dotenv>=1.0.0
 
 # Optional: For better development experience
 python-dateutil>=2.8.0
+
+# Testing Framework Dependencies
+rich>=13.0.0
+crewai>=0.20.0
+langchain-openai>=0.1.0

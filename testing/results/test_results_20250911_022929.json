@@ -1,0 +1,686 @@
+{
+  "metadata": {
+    "framework_version": "1.0.0",
+    "execution_time": "2025-09-11T02:29:29.144884",
+    "total_tests": 13,
+    "test_filter": null
+  },
+  "results": [
+    {
+      "test_case": {
+        "id": "BRIAN_001",
+        "question": "Cannot Find Deposition Session When Logged In with ORCID",
+        "category": "biocurator_language",
+        "severity": "critical",
+        "user_source": "Brian",
+        "description": "Should not mention Ezra or biocurator-specific instructions",
+        "forbidden_content": [
+          "Ezra",
+          "biocurator",
+          "annotator",
+          "allow submit",
+          "RT instructions",
+          "triage",
+          "(for example, Ezra)"
+        ],
+        "required_content": [
+          "support staff",
+          "support team",
+          "RCSB PDB staff"
+        ]
+      },
+      "response": "If you cannot find your deposition session after logging in with your ORCID, ensure that the ORCID used is the same one added as a contact author in the deposition. Only depositions where your ORCID is listed for a contact author will appear in your summary table. If your session was created before ORCID login implementation, it might not be linked to your ORCID account yet. In such cases, contacting RCSB PDB support staff can help associate your existing deposition with your ORCID for access. Also, verify that you have completed email verification when first using ORCID login, as this step is required to create or access sessions via ORCID [ID:1][ID:2].",
+      "evaluation_results": [
+        {
+          "agent_name": "biocurator_detector",
+          "score": 100,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 4.314225
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 88,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 5.549229
+        }
+      ],
+      "overall_score": 94.0,
+      "overall_passed": true,
+      "execution_time": 13.859967,
+      "timestamp": "2025-09-11T02:25:38.447923",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "BRIAN_002",
+        "question": "What file formats are accepted for protein structure deposition?",
+        "category": "redundancy",
+        "severity": "high",
+        "user_source": "Brian",
+        "description": "Should not have redundant Summary or Key Points sections",
+        "forbidden_content": [
+          "## Summary",
+          "### Summary",
+          "**Summary**:",
+          "## Key Points:",
+          "### Key Points:",
+          "**Key Points**:"
+        ],
+        "required_content": [
+          "PDBx/mmCIF",
+          "PDB format",
+          "structure factor"
+        ]
+      },
+      "response": "For protein structure deposition, coordinate files should be submitted in the PDBx/mmCIF format to ensure maximal data fidelity. The system also accepts PDB format files, which are automatically converted to PDBx/mmCIF during deposition, but large structures exceeding 99,999 atoms or 62 chains must use PDBx/mmCIF. Structure factor files can be submitted in mmCIF or mtz formats. For NMR data, restraint files typically use the NMR-STAR format. Complete TER records are required after each polymer chain in PDB files. Tools like pdb_extract and SF-tool are available to help convert and prepare these files for deposition [ID:0][ID:3][ID:6].",
+      "evaluation_results": [
+        {
+          "agent_name": "redundancy_analyzer",
+          "score": 95,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 2.267862
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 92,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 6.963664
+        }
+      ],
+      "overall_score": 93.5,
+      "overall_passed": true,
+      "execution_time": 15.790886,
+      "timestamp": "2025-09-11T02:25:54.344064",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "CHENGHUA_001",
+        "question": "I cannot find my deposition session when logged in with ORCID",
+        "category": "biocurator_language",
+        "severity": "high",
+        "user_source": "Chenghua",
+        "description": "Should not mention internal staff names like Ezra",
+        "forbidden_content": [
+          "Ezra",
+          "contact Ezra",
+          "assistance can be provided to link"
+        ],
+        "required_content": [
+          "support staff",
+          "contact support",
+          "RCSB PDB support"
+        ]
+      },
+      "response": "If you cannot find your deposition session after logging in with ORCID, ensure that the ORCID is added as a contact author in the deposition. Only depositions listing your ORCID for a contact author will appear in your session summary. For depositions made before ORCID login was implemented, sessions may not be linked to your ORCID; contacting RCSB PDB support can help associate them. Also, confirm you have verified your email address when first using ORCID login, as this is required to create or access sessions via ORCID [ID:1][ID:4].",
+      "evaluation_results": [
+        {
+          "agent_name": "biocurator_detector",
+          "score": 95,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 3.660568
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 88,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 7.003721
+        }
+      ],
+      "overall_score": 91.5,
+      "overall_passed": true,
+      "execution_time": 16.565049,
+      "timestamp": "2025-09-11T02:26:11.014369",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "CHENGHUA_002",
+        "question": "Whom to contact for deposition problems",
+        "category": "internal_instructions",
+        "severity": "medium",
+        "user_source": "Chenghua",
+        "description": "Should not reference internal triage sections",
+        "forbidden_content": [
+          "D_12XXXXXXXX",
+          "D_13XXXXXXXX",
+          "triage QA",
+          "entries with Deposition IDs starting with D_12"
+        ],
+        "required_content": [
+          "support team",
+          "deposition support",
+          "contact information"
+        ]
+      },
+      "response": "For deposition problems, you should contact the support team at the wwPDB partner site where you are depositing (e.g., RCSB PDB, PDBe, or PDBj). Use the communication tools within your deposition session to send messages to support staff. If needed, you can also email deposit-help@mail.wwpdb.org for general submission questions. Always provide your Deposition ID and detailed information about your issue to receive prompt assistance [ID:4][ID:7].",
+      "evaluation_results": [
+        {
+          "agent_name": "biocurator_detector",
+          "score": 95,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 4.21425
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 92,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 7.517363
+        }
+      ],
+      "overall_score": 93.5,
+      "overall_passed": true,
+      "execution_time": 19.551701,
+      "timestamp": "2025-09-11T02:26:30.669051",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "IRINA_001",
+        "question": "What is the obsolete policy in the PDB?",
+        "category": "references",
+        "severity": "critical",
+        "user_source": "Irina",
+        "description": "Should not show raw reference IDs and should include complete policy info",
+        "forbidden_content": [
+          "[ID:0]",
+          "[ID:1]",
+          "References: [ID:",
+          "Available reference IDs:"
+        ],
+        "required_content": [
+          "no associated publication",
+          "entry author obsoletes",
+          "structurally incorrect"
+        ]
+      },
+      "response": "The PDB obsolescence policy states that entries can be made obsolete primarily when related publications are retracted, if authors identify errors rendering the structure incorrect, or if a third party requests obsolescence supported by an official government or agency report. Obsoleted entries remain publicly accessible in the archive with references to the retraction and users searching for them are redirected to any superseding entries. Metadata and nomenclature may be updated regularly for consistency without altering coordinates. Coordinate updates retain the same PDB ID and are released immediately, but changes to experimental data require a new deposition with a new PDB ID, potentially obsoleting the original entry with depositor consent. Authorship responsibilities include notifying publication authors in obsolescence cases. Under no circumstances can a released structure be withdrawn from public access [ID:3][ID:4][ID:5][ID:6].",
+      "evaluation_results": [
+        {
+          "agent_name": "reference_formatter",
+          "score": 40,
+          "passed": false,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 4.521672
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 92,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 9.197255
+        }
+      ],
+      "overall_score": 66.0,
+      "overall_passed": false,
+      "execution_time": 18.567344,
+      "timestamp": "2025-09-11T02:26:49.336915",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "IRINA_002",
+        "question": "How do I update my structure after initial deposition?",
+        "category": "references",
+        "severity": "medium",
+        "user_source": "Irina",
+        "description": "Should format references cleanly without raw IDs",
+        "forbidden_content": [
+          "References: [ID:0]",
+          "[ID:1] [ID:2]",
+          "Available reference IDs"
+        ],
+        "required_content": [
+          "According to",
+          "documentation",
+          "policy"
+        ]
+      },
+      "response": "You can update your structure coordinates after initial deposition while retaining the original PDB ID by submitting a request through the OneDep communication panel if deposited via OneDep, or by emailing deposit-help@mail.wwpdb.org for legacy entries. Updates are limited to coordinate and metadata changes only; experimental data cannot be changed in versioning. Each entry can be updated once per year, and each Principal Investigator may update up to three entries annually. After approval, the revised model is processed and released immediately as a new version of the entry [ID:0][ID:5].",
+      "evaluation_results": [
+        {
+          "agent_name": "reference_formatter",
+          "score": 40,
+          "passed": false,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 4.246841
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 85,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 8.031189
+        }
+      ],
+      "overall_score": 62.5,
+      "overall_passed": false,
+      "execution_time": 16.068637,
+      "timestamp": "2025-09-11T02:27:05.510851",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "GREGG_001",
+        "question": "How do I deposit 75 structures of the same protein with different fragments? I do not want to input the same experimental information 75 times.",
+        "category": "internal_instructions",
+        "severity": "critical",
+        "user_source": "Gregg",
+        "description": "Should not include internal notes about RT or disclosure restrictions",
+        "forbidden_content": [
+          "Instructions for the Group Deposition system should not be disclosed over RT",
+          "Notes for annotators",
+          "should not be disclosed",
+          "RT or other publicly visible means"
+        ],
+        "required_content": [
+          "group deposition",
+          "batch submission",
+          "experimental information"
+        ]
+      },
+      "response": "To deposit multiple related structures efficiently, start by completing the deposition for the first structure with the most accurate and complete experimental information. For subsequent entries, use the option \"Based on a previous wwPDB deposition\" to import selected metadata such as contact information, entry title, authorship, and citation details from your initial deposition. This allows you to reuse much of the metadata without re-entering it for each of the 75 structures. Upload coordinate and experimental files for each entry individually but benefit from copied metadata to minimize manual input [ID:0][ID:6].",
+      "evaluation_results": [
+        {
+          "agent_name": "biocurator_detector",
+          "score": 95,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 4.942973
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 85,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 6.925345
+        }
+      ],
+      "overall_score": 90.0,
+      "overall_passed": true,
+      "execution_time": 17.523339,
+      "timestamp": "2025-09-11T02:27:23.139315",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "GREGG_002",
+        "question": "OneDep says that my ligand is not in the PDB but I know that it is there",
+        "category": "depositor_focus",
+        "severity": "high",
+        "user_source": "Gregg",
+        "description": "Should provide instructional guidance, not just policy information",
+        "forbidden_content": [
+          "policy states",
+          "according to policy",
+          "theoretical"
+        ],
+        "required_content": [
+          "upload",
+          "diagram",
+          "contact support",
+          "provide"
+        ]
+      },
+      "response": "If OneDep indicates your ligand is not in the Chemical Component Dictionary (CCD) but you know it exists, this may be due to geometry ambiguities or naming differences. Verify that the ligand ID you provided matches exactly with the CCD entry. If no match appears, you can manually provide complete chemical information by uploading or sketching a 2D chemical drawing, supplying a SMILES string or InChI key, or specifying the correct CCD ligand ID if it was missed due to geometric issues. After confirming the ligand type, upload a ligand image and optionally a definition file on the ligand verification page before submission [ID:5][ID:6].",
+      "evaluation_results": [
+        {
+          "agent_name": "depositor_focus",
+          "score": 75,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 6.610079
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 78,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 5.154202
+        }
+      ],
+      "overall_score": 76.5,
+      "overall_passed": true,
+      "execution_time": 16.524549,
+      "timestamp": "2025-09-11T02:27:39.769143",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "GREGG_003",
+        "question": "What should I do when OneDep validation fails?",
+        "category": "depositor_focus",
+        "severity": "medium",
+        "user_source": "Gregg",
+        "description": "Should end with clear guidance to contact human support",
+        "forbidden_content": [
+          "annotators",
+          "internal process",
+          "biocurator review"
+        ],
+        "required_content": [
+          "Contact",
+          "support",
+          "guidance",
+          "help"
+        ]
+      },
+      "response": "When OneDep validation fails, first carefully review the validation report to identify specific issues. Correct obvious errors in your coordinate or experimental files as indicated. You can replace uploaded files pre-submission using the \"Re-upload files\" option in the deposition interface. After making corrections, re-run validation to confirm issues are resolved. If problems persist or involve complex cases, contact RCSB PDB support through the Communication page within your deposition session for assistance. Note that some sequence alignment mismatches do not block submission but should still be checked [ID:1][ID:4][ID:6].",
+      "evaluation_results": [
+        {
+          "agent_name": "depositor_focus",
+          "score": 92,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 3.550656
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 90,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 6.538884
+        }
+      ],
+      "overall_score": 91.0,
+      "overall_passed": true,
+      "execution_time": 13.707639,
+      "timestamp": "2025-09-11T02:27:53.580722",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "SUTAPA_001",
+        "question": "All the items in my on-going deposition is flagged in green, yet the submit deposition button is not showing up. Please help to complete my deposition",
+        "category": "depositor_focus",
+        "severity": "critical",
+        "user_source": "Sutapa",
+        "description": "Should recommend contacting annotator early, not list many possibilities first",
+        "forbidden_content": [
+          "one common cause is",
+          "you have not yet downloaded",
+          "many possibilities",
+          "validation tab",
+          "accept terms"
+        ],
+        "required_content": [
+          "contact support",
+          "annotator",
+          "look into this",
+          "assistance"
+        ]
+      },
+      "response": "Ensure you have downloaded and accepted the wwPDB validation report; submission is blocked until this step is completed. Also, confirm that if no additional contact authors are to be added, you have selected \"N\" for that question to complete the metadata page. Once all mandatory data are provided and the validation report accepted, the Submit button will appear [ID:0][ID:3].",
+      "evaluation_results": [
+        {
+          "agent_name": "depositor_focus",
+          "score": 60,
+          "passed": false,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 5.670404
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 78,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 4.409757
+        }
+      ],
+      "overall_score": 69.0,
+      "overall_passed": false,
+      "execution_time": 13.697748,
+      "timestamp": "2025-09-11T02:28:07.382711",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "SUTAPA_002",
+        "question": "The sequences for all chains in this deposition are not deposited in Genbank or Uniprot, as this is a Fab fragment that was generated by phage display. Unfortunately the submission GUI wants me to provide a link to one of these two databases for the sequence, and I can't clear it in order to finalize the submission. Please help.",
+        "category": "depositor_focus",
+        "severity": "high",
+        "user_source": "Sutapa",
+        "description": "Should lead with the correct action (communication page), not bury it",
+        "forbidden_content": [
+          "Recommended Action:",
+          "fifth",
+          "last bullet point"
+        ],
+        "required_content": [
+          "communication page",
+          "request assistance",
+          "phage display",
+          "not present in sequence databases",
+          "self-referenced"
+        ]
+      },
+      "response": "For sequences not found in GenBank or UniProt, such as Fab fragments from phage display, you can manually enter the experimental sequence directly into the deposition interface. Use the sequence fields provided for each polymer to input your exact amino acid sequence. This bypasses the requirement for database links and allows you to proceed with submission. Ensure that all other required metadata are complete and validation is accepted before finalizing [ID:0][ID:3].",
+      "evaluation_results": [
+        {
+          "agent_name": "depositor_focus",
+          "score": 60,
+          "passed": false,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 6.423835
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 85,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 6.12198
+        }
+      ],
+      "overall_score": 72.5,
+      "overall_passed": false,
+      "execution_time": 17.320752,
+      "timestamp": "2025-09-11T02:28:24.804396",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "EDGE_001",
+        "question": "How do I reset the deposition interface?",
+        "category": "internal_instructions",
+        "severity": "medium",
+        "user_source": "Irina",
+        "description": "Should not include biocurator-specific reset instructions",
+        "forbidden_content": [
+          "biocurator",
+          "internal process",
+          "annotator access"
+        ],
+        "required_content": [
+          "deposition interface",
+          "reset",
+          "upload"
+        ]
+      },
+      "response": "To reset the deposition interface when major changes\u2014such as altering polymer chain IDs or the number of chains\u2014prevent file processing, go to the \"Re-upload files\" page and upload your new coordinate file. After selecting the new file and deselecting the old one, a \"Clear deposition data\" button will appear at the bottom of the page. Clicking this button will reset the deposition session by deleting some metadata, which you will need to re-enter. Once reset, you can proceed with your updated deposition [ID:0][ID:5].",
+      "evaluation_results": [
+        {
+          "agent_name": "biocurator_detector",
+          "score": 95,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 4.752768
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 85,
+          "passed": true,
+          "issues_found": [
+            "Issues identified by agent - see details"
+          ],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 6.160089
+        }
+      ],
+      "overall_score": 90.0,
+      "overall_passed": true,
+      "execution_time": 14.65907,
+      "timestamp": "2025-09-11T02:28:39.568100",
+      "error": null
+    },
+    {
+      "test_case": {
+        "id": "EDGE_002",
+        "question": "What validation checks are performed during deposition?",
+        "category": "redundancy",
+        "severity": "medium",
+        "user_source": "General",
+        "description": "Should be concise without redundant summaries",
+        "forbidden_content": [
+          "## Summary",
+          "### Key Points:",
+          "**Summary**"
+        ],
+        "required_content": [
+          "validation",
+          "checks",
+          "geometry",
+          "structure"
+        ]
+      },
+      "response": "During deposition, validation checks include assessment of coordinate geometry, sequence consistency, ligand identification and chemistry, B-factors completeness, presence and correctness of refinement records (e.g., ANISOU and TLS), detection of twinned crystal data indicators, and evaluation of biological assembly definitions. Water molecules are checked for proximity to polymer atoms. Validation also verifies that experimental data files match coordinates and that metadata such as authorship and funding information are complete. The system generates detailed validation reports highlighting any issues to guide corrections before submission [ID:0][ID:6].",
+      "evaluation_results": [
+        {
+          "agent_name": "redundancy_analyzer",
+          "score": 98,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 2.431184
+        },
+        {
+          "agent_name": "quality_scorer",
+          "score": 87,
+          "passed": true,
+          "issues_found": [],
+          "recommendations": [
+            "Recommendations provided by agent - see details"
+          ],
+          "execution_time": 8.678217
+        }
+      ],
+      "overall_score": 92.5,
+      "overall_passed": true,
+      "execution_time": 15.010191,
+      "timestamp": "2025-09-11T02:28:54.683412",
+      "error": null
+    }
+  ]
+}
