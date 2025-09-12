@@ -24,8 +24,8 @@ services:
       - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
       - PYTHONUNBUFFERED=1
     volumes:
-      # Mount user data directory for persistence
-      - "${USER_DATA_DIR:-./user_data}:/app/user_data"
+      # Mount user data directory for persistence (use named volume for data safety)
+      - user_data:/app/user_data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:${APP_PORT:-8501}/_stcore/health"]

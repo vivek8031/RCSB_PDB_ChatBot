@@ -40,10 +40,9 @@ fi
 # Load environment variables
 source .env
 
-# Create user data directory if it doesn't exist
-USER_DATA_DIR=${USER_DATA_DIR:-./user_data}
-mkdir -p "$USER_DATA_DIR"
-echo "✅ User data directory ready: $USER_DATA_DIR"
+# User data will be persisted in Docker named volume
+# No need to create local directory - Docker volume handles persistence
+echo "✅ User data will be persisted in Docker volume"
 
 # Use docker compose (v2) if available, fallback to docker-compose (v1)
 DOCKER_COMPOSE_CMD="docker compose"
