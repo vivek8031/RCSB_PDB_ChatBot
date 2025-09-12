@@ -19,12 +19,21 @@ try:
 except ImportError:
     print("Warning: python-dotenv not installed. Environment variables from .env file won't be loaded.")
 
-from .ragflow_assistant_manager import (
-    RAGFlowAssistantManager, 
-    create_assistant_manager, 
-    create_default_assistant_config,
-    StreamingResponse
-)
+try:
+    from .ragflow_assistant_manager import (
+        RAGFlowAssistantManager, 
+        create_assistant_manager, 
+        create_default_assistant_config,
+        StreamingResponse
+    )
+except ImportError:
+    # For direct execution when not imported as a package
+    from ragflow_assistant_manager import (
+        RAGFlowAssistantManager, 
+        create_assistant_manager, 
+        create_default_assistant_config,
+        StreamingResponse
+    )
 
 
 @dataclass
