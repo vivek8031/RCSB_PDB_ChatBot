@@ -36,6 +36,29 @@ if docker-compose ps | grep -q "healthy\|Up"; then
     PORT=$(grep APP_PORT .env 2>/dev/null | cut -d'=' -f2 || echo "8501")
     
     echo ""
+    echo "🧠 Setting up RAGFlow Knowledge Base & Assistant..."
+    
+    # Check if OpenAI API key exists
+    if grep -q "OPENAI_API_KEY=" .env && ! grep -q "your-openai-api-key-here" .env; then
+        echo "📚 Syncing knowledge base with latest documents..."
+        if python3 knowledge_base/initialize_dataset.py --sync; then
+            echo "✅ Knowledge base sync completed"
+            
+            echo "🤖 Creating/updating RAGFlow assistant..."
+            if python3 src/ragflow_assistant_manager.py; then
+                echo "✅ Assistant setup completed"
+            else
+                echo "⚠️  Assistant setup failed - check RAGFlow connection"
+            fi
+        else
+            echo "⚠️  Knowledge base sync failed - continuing with deployment"
+        fi
+    else
+        echo "⚠️  OpenAI API key not configured - skipping knowledge base setup"
+        echo "   Add OPENAI_API_KEY to .env file to enable document processing"
+    fi
+    
+    echo ""
     echo "🎉 Update completed successfully!"
     echo "📱 Application should be accessible at:"
     echo "   - Local: http://localhost:${PORT}"

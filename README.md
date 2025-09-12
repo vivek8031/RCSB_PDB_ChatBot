@@ -16,23 +16,44 @@ An intelligent, multi-user research assistant for protein structures and structu
 - Python 3.10+
 - RAGFlow server running
 - Docker (for production)
+- OpenAI API key for knowledge base processing
 
-### Local Development
+### Complete Setup Process
 
-1. **Install dependencies**
+#### 1. **Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Configure environment**
+#### 2. **Configure environment**
 ```bash
 cp .env.example .env
-# Edit .env with your RAGFlow configuration
+# Edit .env with your configuration:
+# - RAGFLOW_API_KEY: Your RAGFlow API key
+# - RAGFLOW_BASE_URL: RAGFlow server URL (e.g., http://127.0.0.1:9380)
+# - OPENAI_API_KEY: Required for document processing
+# - RAGFLOW_ASSISTANT_NAME: Name for your chat assistant
 ```
 
-3. **Run the application**
+#### 3. **Setup RAGFlow Knowledge Base & Assistant** (Required)
+
+The application requires both a knowledge base and chat assistant in RAGFlow:
+
 ```bash
-streamlit run rcsb_pdb_chatbot.py
+# Step 3a: Create and populate knowledge base with documents
+python3 knowledge_base/initialize_dataset.py --sync
+
+# Step 3b: Create chat assistant linked to knowledge base  
+python3 src/ragflow_assistant_manager.py
+```
+
+**What these scripts do:**
+- **Knowledge Base Script**: Creates dataset, uploads PDF/text documents, processes them into searchable chunks
+- **Assistant Script**: Creates chat assistant, links it to knowledge base, configures AI parameters
+
+#### 4. **Run the application**
+```bash
+streamlit run src/rcsb_pdb_chatbot.py
 ```
 
 ### Universal Deployment (Any Server)
@@ -44,13 +65,92 @@ cd RCSB_PDB_ChatBot
 
 # Configure environment
 cp .env.example .env
-nano .env  # Add your RAGFlow API key and settings
+nano .env  # Add your RAGFlow API key and OpenAI key
 
-# Deploy with one command
+# Full deployment (includes knowledge base setup)
 ./deploy.sh
 ```
 
+#### For existing deployments - Update server with latest changes:
+```bash
+./update-server.sh  # Includes knowledge base sync and assistant updates
+```
+
 Works on any server with Docker - local, AWS, DigitalOcean, anywhere!
+
+## 🔧 RAGFlow Setup & Troubleshooting
+
+### Knowledge Base Management
+
+**Sync documents (detects changes automatically):**
+```bash
+python3 knowledge_base/initialize_dataset.py --sync
+```
+
+**Force recreate knowledge base:**
+```bash
+python3 knowledge_base/initialize_dataset.py --force
+```
+
+**Check processing status:**
+- Script shows real-time progress: `Progress: X/Y completed, Z running, W failed`
+- Failed documents are automatically retried on next sync
+- Look for `RETRY: filename (failed processing)` messages
+
+### Assistant Management
+
+**Create/update assistant:**
+```bash
+python3 src/ragflow_assistant_manager.py
+```
+
+**Test assistant:**
+- Script automatically tests with a sample message
+- Check for `✅ All tests passed!` confirmation
+- Assistant links to knowledge base automatically
+
+### Common Issues
+
+**1. Documents fail processing with "disk usage exceeded flood-stage watermark"**
+```bash
+# Free up disk space
+docker system prune -f --volumes
+
+# Restart RAGFlow containers (clears Elasticsearch read-only mode)
+cd ragflow/docker
+docker compose -f docker-compose.yml down
+docker compose -f docker-compose.yml up -d
+
+# Retry processing
+python3 knowledge_base/initialize_dataset.py --sync
+```
+
+**2. "chunk_token_num" parameter error (RAGFlow version mismatch)**
+- Update to latest RAGFlow v0.20.5+
+- Enhanced script detects and retries failed documents automatically
+
+**3. Assistant not found or connection issues**
+```bash
+# Check RAGFlow connection
+curl http://127.0.0.1:9380/health
+
+# Verify API key in .env file
+grep RAGFLOW_API_KEY .env
+```
+
+**4. OpenAI API key missing**
+```bash
+# Required for document processing
+echo "OPENAI_API_KEY=your-key-here" >> .env
+```
+
+### Script Integration
+
+Both knowledge base and assistant setup are included in deployment scripts:
+
+- **deploy.sh**: Full initial setup
+- **update-server.sh**: Updates with knowledge base sync
+- **Scripts are idempotent**: Safe to run multiple times
 
 ## 🏗️ Architecture
 
