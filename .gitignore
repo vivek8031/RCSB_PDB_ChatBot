@@ -43,4 +43,6 @@ Thumbs.db
 # ragflow_conversations.json
 user_data/*.json
 *.pdf
-user_data/user_vivek_sessions.json
+
+# All user session data files
+user_data/
