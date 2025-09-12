@@ -158,6 +158,14 @@ class KnowledgeBaseInitializer:
                 if file_info.size != existing_doc.size:
                     updated_files.append(file_info)
                     self.logger.info(f"UPDATED: {filename} (size: {existing_doc.size} → {file_info.size})")
+                elif hasattr(existing_doc, 'run') and existing_doc.run == "FAIL":
+                    # Re-process documents that failed processing
+                    updated_files.append(file_info)
+                    self.logger.info(f"RETRY: {filename} (failed processing, status: {existing_doc.run})")
+                elif hasattr(existing_doc, 'chunk_count') and existing_doc.chunk_count == 0 and hasattr(existing_doc, 'run') and existing_doc.run == "DONE":
+                    # Re-process documents that completed but have no chunks (failed at insert step)
+                    updated_files.append(file_info)
+                    self.logger.info(f"RETRY: {filename} (completed but 0 chunks - likely insert failure)")
         
         # Find deleted files (exist in dataset but not locally)
         for filename, doc in existing_docs.items():
@@ -383,11 +391,20 @@ class KnowledgeBaseInitializer:
                 for doc in documents:
                     if doc.id in doc_ids:
                         if doc.run == "DONE":
-                            completed += 1
+                            # Check if actually successful (has chunks)
+                            if hasattr(doc, 'chunk_count') and doc.chunk_count > 0:
+                                completed += 1
+                            else:
+                                # Completed but no chunks = insert failure
+                                failed += 1
+                                self.logger.warning(f"Document {doc.name} marked DONE but has {getattr(doc, 'chunk_count', 0)} chunks")
                         elif doc.run == "FAIL":
                             failed += 1
                         elif doc.run == "RUNNING":
                             running += 1
+                        else:
+                            # Unknown status
+                            self.logger.warning(f"Document {doc.name} has unknown status: {doc.run}")
 
                 total = len(doc_ids)
                 self.logger.info(f"Progress: {completed}/{total} completed, {running} running, {failed} failed")
@@ -396,6 +413,13 @@ class KnowledgeBaseInitializer:
                     self.logger.info("Document processing completed")
                     if failed > 0:
                         self.logger.warning(f"{failed} documents failed processing")
+                        # Log details about failed documents
+                        for doc in documents:
+                            if doc.id in doc_ids:
+                                if doc.run == "FAIL":
+                                    self.logger.error(f"FAILED: {doc.name} - Status: {doc.run}")
+                                elif doc.run == "DONE" and getattr(doc, 'chunk_count', 0) == 0:
+                                    self.logger.error(f"FAILED: {doc.name} - Status: {doc.run} but 0 chunks (insert failure)")
                     break
 
                 time.sleep(10)  # Check every 10 seconds
@@ -412,11 +436,16 @@ class KnowledgeBaseInitializer:
             documents = dataset.list_documents()
 
             total_docs = len(documents)
-            total_chunks = sum(doc.chunk_count for doc in documents)
-            total_tokens = sum(doc.token_count for doc in documents)
+            total_chunks = sum(getattr(doc, 'chunk_count', 0) for doc in documents)
+            total_tokens = sum(getattr(doc, 'token_count', 0) for doc in documents)
 
-            processing_success = sum(1 for doc in documents if doc.run == "DONE")
-            processing_failures = sum(1 for doc in documents if doc.run == "FAIL")
+            # Count truly successful documents (DONE with chunks)
+            processing_success = sum(1 for doc in documents 
+                                   if doc.run == "DONE" and getattr(doc, 'chunk_count', 0) > 0)
+            # Count failed documents (FAIL or DONE with 0 chunks)
+            processing_failures = sum(1 for doc in documents 
+                                    if doc.run == "FAIL" or 
+                                    (doc.run == "DONE" and getattr(doc, 'chunk_count', 0) == 0))
 
             metrics = {
                 "total_documents": total_docs,
