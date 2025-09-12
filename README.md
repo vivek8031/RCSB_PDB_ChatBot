@@ -18,7 +18,35 @@ An intelligent, multi-user research assistant for protein structures and structu
 - Docker (for production)
 - OpenAI API key for knowledge base processing
 
-### Complete Setup Process
+## 🎯 Deployment Options
+
+Choose the right approach for your needs:
+
+### Option 1: **Automated Deployment** (Recommended)
+
+**For NEW installations:**
+```bash
+# 1. Clone repository
+git clone https://github.com/vivek8031/RCSB_PDB_ChatBot.git
+cd RCSB_PDB_ChatBot
+
+# 2. Configure environment  
+cp .env.example .env
+nano .env  # Add RAGFLOW_API_KEY, RAGFLOW_BASE_URL, OPENAI_API_KEY
+
+# 3. Deploy everything automatically
+./deploy.sh
+```
+
+**For EXISTING deployments (updates):**
+```bash
+# Single command - updates code, knowledge base, and assistant
+./update-server.sh
+```
+
+### Option 2: **Manual Setup** (Development)
+
+**For local development or manual control:**
 
 #### 1. **Install dependencies**
 ```bash
@@ -47,33 +75,43 @@ python3 knowledge_base/initialize_dataset.py --sync
 python3 src/ragflow_assistant_manager.py
 ```
 
-**What these scripts do:**
-- **Knowledge Base Script**: Creates dataset, uploads PDF/text documents, processes them into searchable chunks
-- **Assistant Script**: Creates chat assistant, links it to knowledge base, configures AI parameters
-
 #### 4. **Run the application**
 ```bash
 streamlit run src/rcsb_pdb_chatbot.py
 ```
 
-### Universal Deployment (Any Server)
+## 📋 Script Reference
 
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| `./deploy.sh` | **Initial deployment** | First-time setup, includes Docker validation, RAGFlow setup |
+| `./update-server.sh` | **Production updates** | Existing deployments, pulls code updates, syncs knowledge base |
+| Manual commands | **Development** | Local development, debugging, manual control |
+
+### What Each Script Does
+
+#### `./deploy.sh` - Complete Initial Setup
 ```bash
-# Clone the repository
-git clone https://github.com/vivek8031/RCSB_PDB_ChatBot.git
-cd RCSB_PDB_ChatBot
-
-# Configure environment
-cp .env.example .env
-nano .env  # Add your RAGFlow API key and OpenAI key
-
-# Full deployment (includes knowledge base setup)
-./deploy.sh
+1. ✅ Validates Docker & Docker Compose installation
+2. ✅ Creates .env from template (if missing)  
+3. ✅ Creates user data directory
+4. ✅ Builds and starts Docker containers
+5. ✅ Waits for application health check
+6. ✅ Creates RAGFlow knowledge base with documents
+7. ✅ Creates RAGFlow chat assistant
+8. ✅ Provides access URLs and management commands
 ```
 
-#### For existing deployments - Update server with latest changes:
+#### `./update-server.sh` - Production Updates
 ```bash
-./update-server.sh  # Includes knowledge base sync and assistant updates
+1. ✅ Pulls latest code from GitHub
+2. ✅ Stops existing containers  
+3. ✅ Rebuilds containers with latest changes
+4. ✅ Starts updated containers
+5. ✅ Waits for health check
+6. ✅ Syncs RAGFlow knowledge base (detects changes)
+7. ✅ Updates RAGFlow assistant configuration
+8. ✅ Reports deployment status
 ```
 
 Works on any server with Docker - local, AWS, DigitalOcean, anywhere!
