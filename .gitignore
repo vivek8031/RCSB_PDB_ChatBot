@@ -42,7 +42,6 @@ Thumbs.db
 # Local conversation data (keep for now, but could be moved to user-specific files)
 # ragflow_conversations.json
 user_data/*.json
-*.pdf
 
 # All user session data files
 user_data/
