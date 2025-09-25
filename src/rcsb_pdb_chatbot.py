@@ -42,22 +42,23 @@ def process_markdown_response(content: str) -> str:
     return content
 
 
-def display_message_feedback_ui(message: Dict[str, Any]):
+def display_message_feedback_ui(message: Dict[str, Any], message_index: int = 0):
     """
     Display feedback UI for an assistant message using Streamlit's built-in widgets
-    
+
     Args:
         message: Message dictionary containing role, content, timestamp, etc.
+        message_index: Index of the message for unique key generation
     """
     if message["role"] != "assistant":
         return
-    
+
     # Get message timestamp for unique identification
     message_timestamp = message.get("timestamp")
     if not message_timestamp:
-        # For backward compatibility, generate timestamp from content hash
+        # For backward compatibility, generate timestamp from content hash + index
         import hashlib
-        content_hash = hashlib.md5(message["content"].encode()).hexdigest()[:8]
+        content_hash = hashlib.md5(f"{message['content']}{message.get('role', 'unknown')}{message_index}".encode()).hexdigest()[:8]
         message_timestamp = f"legacy_{content_hash}"
     
     # Unique keys for widgets
@@ -584,7 +585,7 @@ def display_main_interface():
     st.caption(f"User: {st.session_state.current_user_id} | Created: {current_chat.created_at.strftime('%Y-%m-%d %H:%M')}")
     
     # Display chat messages
-    for message in st.session_state.messages:
+    for message_index, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             # Process and render markdown content properly
             processed_content = process_markdown_response(message["content"])
@@ -617,7 +618,7 @@ def display_main_interface():
             
             # Add feedback UI for assistant messages
             if message["role"] == "assistant":
-                display_message_feedback_ui(message)
+                display_message_feedback_ui(message, message_index)
     
     # Chat input
     if prompt := st.chat_input("Ask about RCSB PDB, protein structures, or anything related..."):
@@ -690,7 +691,7 @@ def display_main_interface():
                         "references": references,
                         "timestamp": datetime.now().isoformat()  # Add timestamp for feedback
                     }
-                    display_message_feedback_ui(new_message)
+                    display_message_feedback_ui(new_message, len(st.session_state.messages))
                 
             except Exception as e:
                 st.error(f"Error getting response: {e}")
