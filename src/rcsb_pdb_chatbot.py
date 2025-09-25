@@ -101,18 +101,18 @@ def display_message_feedback_ui(message: Dict[str, Any]):
     
     with col2:
         # Comment toggle button
-        if f"show_comment_{message_timestamp}" not in st.session_state:
-            st.session_state[f"show_comment_{message_timestamp}"] = False
-        
-        if st.button("💬 Comment", key=f"comment_btn_{message_timestamp}", help="Add optional comment"):
-            st.session_state[f"show_comment_{message_timestamp}"] = not st.session_state[f"show_comment_{message_timestamp}"]
-    
+        if f"show_comment_{message_id}" not in st.session_state:
+            st.session_state[f"show_comment_{message_id}"] = False
+
+        if st.button("💬 Comment", key=f"comment_btn_{message_id}", help="Add optional comment"):
+            st.session_state[f"show_comment_{message_id}"] = not st.session_state[f"show_comment_{message_id}"]
+
     with col3:
         # Save feedback button
-        save_feedback = st.button("💾 Save", key=f"save_{message_timestamp}", help="Save your feedback")
+        save_feedback = st.button("💾 Save", key=f"save_{message_id}", help="Save your feedback")
     
     # Expandable comment section
-    if st.session_state.get(f"show_comment_{message_timestamp}", False):
+    if st.session_state.get(f"show_comment_{message_id}", False):
         with st.container():
             st.markdown("**Optional Feedback:**")
             
@@ -141,7 +141,7 @@ def display_message_feedback_ui(message: Dict[str, Any]):
         }
         
         # Add categories and comment if provided
-        if st.session_state.get(f"show_comment_{message_timestamp}", False):
+        if st.session_state.get(f"show_comment_{message_id}", False):
             if st.session_state.get(categories_key):
                 feedback_data["categories"] = st.session_state[categories_key]
             if st.session_state.get(comment_key):
