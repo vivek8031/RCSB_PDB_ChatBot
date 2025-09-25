@@ -45,3 +45,4 @@ user_data/*.json
 
 # All user session data files
 user_data/
+*.pdf
