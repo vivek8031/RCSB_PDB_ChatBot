@@ -100,16 +100,18 @@ class RAGFlowAssistantManager:
 
         # Create new dataset if not found
         try:
-            from ragflow_sdk import DataSet
+            from ragflow_sdk.modules.dataset import DataSet
 
             # Configure for scientific documents with RAPTOR
-            parser_config = DataSet.ParserConfig(
-                chunk_token_num=512,
-                delimiter="\\n",
-                html4excel=False,
-                layout_recognize="DeepDOC",
-                raptor={"use_raptor": True}
-            )
+            parser_config_dict = {
+                "chunk_token_num": 512,
+                "delimiter": "\\n",
+                "html4excel": False,
+                "layout_recognize": "DeepDOC",
+                "raptor": {"use_raptor": True}
+            }
+
+            parser_config = DataSet.ParserConfig(self.ragflow_client, parser_config_dict)
 
             dataset = self.ragflow_client.create_dataset(
                 name=dataset_name,
