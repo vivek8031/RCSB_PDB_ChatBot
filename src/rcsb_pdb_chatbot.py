@@ -52,17 +52,17 @@ def display_message_feedback_ui(message: Dict[str, Any]):
     if message["role"] != "assistant":
         return
 
-    # Get message timestamp for unique identification
-    message_timestamp = message.get("timestamp")
-    if not message_timestamp:
-        # Skip feedback for messages without timestamps
+    # Get message ID for unique identification
+    message_id = message.get("message_id")
+    if not message_id:
+        # Skip feedback for messages without message ID
         return
-    
+
     # Unique keys for widgets
-    feedback_key = f"feedback_{message_timestamp}"
-    comment_key = f"comment_{message_timestamp}"
-    expand_key = f"expand_comment_{message_timestamp}"
-    categories_key = f"categories_{message_timestamp}"
+    feedback_key = f"feedback_{message_id}"
+    comment_key = f"comment_{message_id}"
+    expand_key = f"expand_comment_{message_id}"
+    categories_key = f"categories_{message_id}"
     
     # Check if feedback already exists
     existing_feedback = None
@@ -72,7 +72,7 @@ def display_message_feedback_ui(message: Dict[str, Any]):
         existing_feedback = st.session_state.session_manager.get_message_feedback(
             st.session_state.current_user_id,
             st.session_state.current_chat_id,
-            message_timestamp
+            message_id
         )
     
     # Feedback section header
@@ -155,7 +155,7 @@ def display_message_feedback_ui(message: Dict[str, Any]):
             success = st.session_state.session_manager.add_message_feedback(
                 st.session_state.current_user_id,
                 st.session_state.current_chat_id,
-                message_timestamp,
+                message_id,
                 feedback_data
             )
             
@@ -216,13 +216,14 @@ def load_chat_messages():
             message_dict = {
                 "role": stored_msg.role,
                 "content": stored_msg.content,
-                "timestamp": stored_msg.timestamp.isoformat()
+                "timestamp": stored_msg.timestamp.isoformat(),
+                "message_id": stored_msg.message_id
             }
-            
+
             # Add references if available
             if stored_msg.references:
                 message_dict["references"] = stored_msg.references
-            
+
             st.session_state.messages.append(message_dict)
             
         print(f"✅ Loaded {len(st.session_state.messages)} messages for chat {st.session_state.current_chat_id}")
@@ -620,9 +621,11 @@ def display_main_interface():
     # Chat input
     if prompt := st.chat_input("Ask about RCSB PDB, protein structures, or anything related..."):
         # Add user message to chat history
+        import uuid
         st.session_state.messages.append({
             "role": "user",
             "content": prompt,
+            "message_id": str(uuid.uuid4()),
             "timestamp": datetime.now().isoformat()
         })
         
@@ -638,6 +641,7 @@ def display_main_interface():
             
             try:
                 # Stream response from RAGFlow
+                assistant_message_id = None
                 for response_chunk in st.session_state.session_manager.send_message_to_chat(
                     st.session_state.current_user_id,
                     st.session_state.current_chat_id,
@@ -646,22 +650,25 @@ def display_main_interface():
                     # Update the message as it streams
                     if response_chunk.content != full_response:
                         full_response = response_chunk.content
-                        
+
                         # Process and render markdown content during streaming
                         processed_content = process_markdown_response(full_response)
-                        
+
                         # Use Streamlit's built-in markdown rendering
                         message_placeholder.markdown(processed_content)
-                    
-                    # Capture references from the final response
+
+                    # Capture references and message ID from the final response
                     if response_chunk.references:
                         references = response_chunk.references
-                
+                    if response_chunk.message_id:
+                        assistant_message_id = response_chunk.message_id
+
                 # Add assistant message to chat history
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": full_response,
                     "references": references,
+                    "message_id": assistant_message_id,
                     "timestamp": datetime.now().isoformat()
                 })
                 
@@ -691,15 +698,18 @@ def display_main_interface():
                         "role": "assistant",
                         "content": full_response,
                         "references": references,
-                        "timestamp": datetime.now().isoformat()  # Add timestamp for feedback
+                        "message_id": assistant_message_id,
+                        "timestamp": datetime.now().isoformat()
                     }
                     display_message_feedback_ui(new_message)
                 
             except Exception as e:
                 st.error(f"Error getting response: {e}")
+                import uuid
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": f"Sorry, I encountered an error: {e}",
+                    "message_id": str(uuid.uuid4()),
                     "timestamp": datetime.now().isoformat()
                 })
 

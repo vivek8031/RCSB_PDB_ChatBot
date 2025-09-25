@@ -52,6 +52,7 @@ class StoredMessage:
     role: str  # 'user' or 'assistant'
     content: str
     timestamp: datetime
+    message_id: str = None  # Unique UUID for message identification
     references: Optional[List[Dict]] = None
     feedback: Optional[Dict[str, Any]] = None  # User feedback for this message
 
@@ -316,6 +317,7 @@ class UserSessionManager:
                 role="user",
                 content=message,
                 timestamp=datetime.now(),
+                message_id=str(uuid.uuid4()),
                 references=None
             )
             user_chat.messages.append(user_message)
@@ -323,30 +325,36 @@ class UserSessionManager:
             # Send message to the underlying RAGFlow session and collect full response
             full_response = ""
             final_references = None
-            
+
+            # Generate UUID for assistant message once
+            assistant_message_id = str(uuid.uuid4())
+            message_timestamp = datetime.now()
+
             for response_chunk in self.assistant_manager.send_message(
-                user_chat.ragflow_session_id, 
-                message, 
+                user_chat.ragflow_session_id,
+                message,
                 stream=True
             ):
                 full_response = response_chunk.content
                 final_references = response_chunk.references
-                
+
                 # Convert StreamingResponse to ChatMessage for compatibility
                 chat_message = ChatMessage(
                     role="assistant",
                     content=response_chunk.content,
-                    timestamp=datetime.now(),
+                    timestamp=message_timestamp,
+                    message_id=assistant_message_id,
                     references=response_chunk.references
                 )
                 yield chat_message
-            
+
             # Store the assistant's response
             if full_response:
                 assistant_message = StoredMessage(
                     role="assistant",
                     content=full_response,
-                    timestamp=datetime.now(),
+                    timestamp=message_timestamp,
+                    message_id=assistant_message_id,
                     references=final_references
                 )
                 user_chat.messages.append(assistant_message)
@@ -447,16 +455,16 @@ class UserSessionManager:
     
     # ================= FEEDBACK MANAGEMENT METHODS =================
     
-    def add_message_feedback(self, user_id: str, chat_id: str, message_timestamp: str, feedback_data: Dict[str, Any]) -> bool:
+    def add_message_feedback(self, user_id: str, chat_id: str, message_id: str, feedback_data: Dict[str, Any]) -> bool:
         """
         Add feedback to a specific message
-        
+
         Args:
             user_id: User identifier
             chat_id: Chat identifier
-            message_timestamp: Timestamp of the message (ISO format string)
+            message_id: UUID of the message
             feedback_data: Feedback dictionary with keys: rating, categories, comment, feedback_timestamp
-            
+
         Returns:
             True if feedback was added successfully, False otherwise
         """
@@ -466,15 +474,15 @@ class UserSessionManager:
                 print(f"❌ Chat {chat_id} not found for user {user_id}")
                 return False
             
-            # Find the message by timestamp
+            # Find the message by UUID
             target_message = None
             for message in user_chat.messages:
-                if message.timestamp.isoformat() == message_timestamp:
+                if message.message_id == message_id:
                     target_message = message
                     break
-            
+
             if not target_message:
-                print(f"❌ Message with timestamp {message_timestamp} not found")
+                print(f"❌ Message with ID {message_id} not found")
                 return False
             
             # Add current timestamp if not provided
@@ -491,22 +499,22 @@ class UserSessionManager:
             user_session = self.get_user_session(user_id)
             self._save_user_sessions(user_session)
             
-            print(f"✅ Added feedback to message {message_timestamp[:19]}")
+            print(f"✅ Added feedback to message {message_id}")
             return True
             
         except Exception as e:
             print(f"❌ Failed to add feedback: {e}")
             return False
     
-    def get_message_feedback(self, user_id: str, chat_id: str, message_timestamp: str) -> Optional[Dict[str, Any]]:
+    def get_message_feedback(self, user_id: str, chat_id: str, message_id: str) -> Optional[Dict[str, Any]]:
         """
         Get feedback for a specific message
-        
+
         Args:
             user_id: User identifier
-            chat_id: Chat identifier 
-            message_timestamp: Timestamp of the message (ISO format string)
-            
+            chat_id: Chat identifier
+            message_id: UUID of the message
+
         Returns:
             Feedback dictionary or None if not found
         """
@@ -515,9 +523,9 @@ class UserSessionManager:
             if not user_chat:
                 return None
             
-            # Find the message by timestamp
+            # Find the message by UUID
             for message in user_chat.messages:
-                if message.timestamp.isoformat() == message_timestamp:
+                if message.message_id == message_id:
                     return message.feedback
             
             return None
@@ -526,22 +534,22 @@ class UserSessionManager:
             print(f"❌ Failed to get feedback: {e}")
             return None
     
-    def update_message_feedback(self, user_id: str, chat_id: str, message_timestamp: str, feedback_data: Dict[str, Any]) -> bool:
+    def update_message_feedback(self, user_id: str, chat_id: str, message_id: str, feedback_data: Dict[str, Any]) -> bool:
         """
         Update existing feedback for a message
-        
+
         Args:
             user_id: User identifier
             chat_id: Chat identifier
-            message_timestamp: Timestamp of the message (ISO format string)
+            message_id: UUID of the message
             feedback_data: Updated feedback dictionary
-            
+
         Returns:
             True if feedback was updated successfully, False otherwise
         """
         try:
             # Use the same logic as add_message_feedback
-            return self.add_message_feedback(user_id, chat_id, message_timestamp, feedback_data)
+            return self.add_message_feedback(user_id, chat_id, message_id, feedback_data)
             
         except Exception as e:
             print(f"❌ Failed to update feedback: {e}")
