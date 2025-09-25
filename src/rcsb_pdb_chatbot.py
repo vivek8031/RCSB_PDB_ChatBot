@@ -42,13 +42,12 @@ def process_markdown_response(content: str) -> str:
     return content
 
 
-def display_message_feedback_ui(message: Dict[str, Any], message_index: int = 0):
+def display_message_feedback_ui(message: Dict[str, Any]):
     """
     Display feedback UI for an assistant message using Streamlit's built-in widgets
 
     Args:
         message: Message dictionary containing role, content, timestamp, etc.
-        message_index: Index of the message for unique key generation
     """
     if message["role"] != "assistant":
         return
@@ -56,10 +55,8 @@ def display_message_feedback_ui(message: Dict[str, Any], message_index: int = 0)
     # Get message timestamp for unique identification
     message_timestamp = message.get("timestamp")
     if not message_timestamp:
-        # For backward compatibility, generate timestamp from content hash + index
-        import hashlib
-        content_hash = hashlib.md5(f"{message['content']}{message.get('role', 'unknown')}{message_index}".encode()).hexdigest()[:8]
-        message_timestamp = f"legacy_{content_hash}"
+        # Skip feedback for messages without timestamps
+        return
     
     # Unique keys for widgets
     feedback_key = f"feedback_{message_timestamp}"
@@ -585,7 +582,7 @@ def display_main_interface():
     st.caption(f"User: {st.session_state.current_user_id} | Created: {current_chat.created_at.strftime('%Y-%m-%d %H:%M')}")
     
     # Display chat messages
-    for message_index, message in enumerate(st.session_state.messages):
+    for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             # Process and render markdown content properly
             processed_content = process_markdown_response(message["content"])
@@ -618,12 +615,16 @@ def display_main_interface():
             
             # Add feedback UI for assistant messages
             if message["role"] == "assistant":
-                display_message_feedback_ui(message, message_index)
+                display_message_feedback_ui(message)
     
     # Chat input
     if prompt := st.chat_input("Ask about RCSB PDB, protein structures, or anything related..."):
         # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state.messages.append({
+            "role": "user",
+            "content": prompt,
+            "timestamp": datetime.now().isoformat()
+        })
         
         # Display user message
         with st.chat_message("user"):
@@ -658,9 +659,10 @@ def display_main_interface():
                 
                 # Add assistant message to chat history
                 st.session_state.messages.append({
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": full_response,
-                    "references": references
+                    "references": references,
+                    "timestamp": datetime.now().isoformat()
                 })
                 
                 # Show references if available
@@ -691,13 +693,14 @@ def display_main_interface():
                         "references": references,
                         "timestamp": datetime.now().isoformat()  # Add timestamp for feedback
                     }
-                    display_message_feedback_ui(new_message, len(st.session_state.messages))
+                    display_message_feedback_ui(new_message)
                 
             except Exception as e:
                 st.error(f"Error getting response: {e}")
                 st.session_state.messages.append({
                     "role": "assistant",
-                    "content": f"Sorry, I encountered an error: {e}"
+                    "content": f"Sorry, I encountered an error: {e}",
+                    "timestamp": datetime.now().isoformat()
                 })
 
 
