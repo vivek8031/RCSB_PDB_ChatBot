@@ -1,0 +1,26 @@
+{
+  "user_id": "alice",
+  "session_name": "alice_main_session",
+  "created_at": "2025-09-12T17:17:02.883870",
+  "chats": [
+    {
+      "chat_id": "48d284df-b095-4406-9dc3-ddd722554992",
+      "title": "Protein Research",
+      "created_at": "2025-09-12T17:17:02.883824",
+      "updated_at": "2025-09-12T17:17:02.883829",
+      "message_count": 0,
+      "ragflow_session_id": "35794752902611f0b8a266e50d46cfe6",
+      "messages": []
+    },
+    {
+      "chat_id": "c469e6a4-653e-4504-b400-5caf85778931",
+      "title": "Data Analysis",
+      "created_at": "2025-09-12T17:17:02.894311",
+      "updated_at": "2025-09-12T17:17:02.894315",
+      "message_count": 0,
+      "ragflow_session_id": "357aa368902611f0a93966e50d46cfe6",
+      "messages": []
+    }
+  ],
+  "total_chats": 2
+}
