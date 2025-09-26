@@ -24,8 +24,8 @@ services:
       - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
       - PYTHONUNBUFFERED=1
     volumes:
-      # Mount user data directory for persistence (use named volume for data safety)
-      - user_data:/app/user_data
+      # Mount user data directory for persistence (bind mount for easy host access)
+      - ./user_data:/app/user_data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:${APP_PORT:-8501}/_stcore/health"]
@@ -40,6 +40,7 @@ networks:
   rcsb-network:
     driver: bridge
 
-volumes:
-  user_data:
-    driver: local
+# volumes:
+  # user_data:
+    # driver: local
+# Note: Using bind mount instead of named volume for easier data management
