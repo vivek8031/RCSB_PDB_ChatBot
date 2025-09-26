@@ -40,9 +40,11 @@ fi
 # Load environment variables
 source .env
 
-# User data will be persisted in Docker named volume
-# No need to create local directory - Docker volume handles persistence
-echo "✅ User data will be persisted in Docker volume"
+# Create user_data directory for bind mount persistence
+echo "📁 Setting up user data directory..."
+mkdir -p user_data
+chmod 755 user_data
+echo "✅ User data will be persisted in local directory: $(pwd)/user_data"
 
 # Use docker compose (v2) if available, fallback to docker-compose (v1)
 DOCKER_COMPOSE_CMD="docker compose"
@@ -98,9 +100,10 @@ if curl -f -s "http://localhost:$APP_PORT/_stcore/health" > /dev/null 2>&1; then
     echo ""
     echo "📋 Management commands:"
     echo "   - View logs: $DOCKER_COMPOSE_CMD logs -f"
-    echo "   - Restart: $DOCKER_COMPOSE_CMD restart"  
+    echo "   - Restart: $DOCKER_COMPOSE_CMD restart"
     echo "   - Stop: $DOCKER_COMPOSE_CMD down"
     echo "   - Update: ./update-server.sh"
+    echo "   - Manage data: ./manage-data.sh"
 else
     echo "⚠️  Application may not be ready yet. Check logs:"
     echo "   $DOCKER_COMPOSE_CMD logs"
