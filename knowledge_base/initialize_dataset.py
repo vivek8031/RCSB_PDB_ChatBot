@@ -263,6 +263,7 @@ class KnowledgeBaseInitializer:
         # Create parser configuration dictionary for naive method
         parser_config_dict = {
             "chunk_token_num": self.config.chunk_token_num,
+            "delimiter": "\n",  # Actual newline character (not "\\n")
             "html4excel": self.config.html4excel,
             "layout_recognize": "DeepDOC" if self.config.layout_recognize else "false",
             "raptor": {
@@ -364,6 +365,7 @@ class KnowledgeBaseInitializer:
                     doc.update({
                         "parser_config": {
                             "chunk_token_num": 512,
+                            "delimiter": "\n",  # Actual newline character (not "\\n")
                             "html4excel": False,
                             "layout_recognize": False,  # No OCR for text files
                             "raptor": {"use_raptor": True}

@@ -105,7 +105,7 @@ class RAGFlowAssistantManager:
             # Configure for scientific documents with RAPTOR
             parser_config_dict = {
                 "chunk_token_num": 512,
-                "delimiter": "\\n",
+                "delimiter": "\n",  # Actual newline character (not "\\n")
                 "html4excel": False,
                 "layout_recognize": "DeepDOC",
                 "raptor": {"use_raptor": True}
