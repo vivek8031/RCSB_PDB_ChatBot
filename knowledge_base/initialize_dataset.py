@@ -402,7 +402,7 @@ class KnowledgeBaseInitializer:
             self.logger.error(f"Failed to process documents: {e}")
             raise
 
-    def monitor_processing_progress(self, dataset: Any, doc_ids: List[str], timeout: int = 300) -> None:
+    def monitor_processing_progress(self, dataset: Any, doc_ids: List[str], timeout: int = 1000) -> None:
         """Monitor document processing progress"""
         self.logger.info("Monitoring processing progress...")
         start_time = time.time()
