@@ -351,6 +351,35 @@ class KnowledgeBaseInitializer:
             self.logger.error(f"Failed to upload documents: {e}")
             raise
 
+    def configure_text_files(self, dataset: Any) -> None:
+        """Configure .txt files to use native parser (no OCR)"""
+        self.logger.info("Configuring text files with native parser...")
+
+        try:
+            documents = dataset.list_documents()
+
+            txt_files_configured = 0
+            for doc in documents:
+                # Only update .txt files
+                if doc.name.endswith('.txt'):
+                    doc.update({
+                        "parser_config": {
+                            "chunk_token_num": 512,
+                            "delimiter": "\\n",
+                            "html4excel": False,
+                            "layout_recognize": False,  # No OCR for text files
+                            "raptor": {"use_raptor": True}
+                        }
+                    })
+                    self.logger.info(f"✅ {doc.name} → Native parser (no OCR)")
+                    txt_files_configured += 1
+
+            self.logger.info(f"Configured {txt_files_configured} text file(s) with native parser")
+
+        except Exception as e:
+            self.logger.error(f"Failed to configure text files: {e}")
+            raise
+
     def process_documents(self, dataset: Any) -> None:
         """Process uploaded documents with parsing and chunking"""
         self.logger.info("Starting document processing...")
@@ -509,6 +538,7 @@ class KnowledgeBaseInitializer:
 
             # Upload and process documents
             self.upload_documents(dataset)
+            self.configure_text_files(dataset)  # Configure .txt files with native parser
             self.process_documents(dataset)
 
             # Collect metrics
@@ -577,6 +607,7 @@ class KnowledgeBaseInitializer:
                 dataset = self.create_dataset()
                 # For new dataset, upload all documents
                 self.upload_documents(dataset)
+                self.configure_text_files(dataset)  # Configure .txt files with native parser
                 self.process_documents(dataset)
                 
                 # Count all as new
