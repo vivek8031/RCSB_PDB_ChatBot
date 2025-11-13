@@ -19,3 +19,29 @@ python-dateutil>=2.8.0
 rich>=13.0.0
 crewai>=0.20.0
 langchain-openai>=0.1.0
+
+# Google Drive Integration Dependencies
+google-api-python-client>=2.100.0    # Google Drive API
+google-auth-httplib2>=0.1.1          # Auth support
+google-auth-oauthlib>=1.1.0          # OAuth flow
+gspread>=5.11.0                      # Google Sheets API wrapper
+
+# PDF Conversion and Processing
+weasyprint>=60.0                     # Primary HTML-to-PDF converter
+playwright>=1.40.0                   # Fallback for JS-heavy pages
+PyPDF2>=3.0.0                        # PDF manipulation
+reportlab>=4.0.0                     # PDF generation
+pdfplumber>=0.10.0                   # PDF analysis/optimization
+
+# HTTP and Content Fetching
+requests>=2.31.0                     # HTTP requests
+beautifulsoup4>=4.12.0               # HTML parsing
+lxml>=4.9.0                          # XML/HTML parser
+
+# Data Processing
+openpyxl>=3.1.0                      # Excel file support
+pandas>=2.1.0                        # Data manipulation
+
+# Utilities
+tenacity>=8.2.0                      # Retry logic
+python-magic>=0.4.27                 # File type detection

@@ -51,3 +51,15 @@ user_data/
 backups/
 exports/
 abi_abstract/*
+
+# Google Drive Sync
+.gdrive_sync_state.json
+google_drive_credentials.json
+google_drive_token.json
+google_drive_token.pickle
+client_secret*.json
+logs/google_drive_sync.log
+logs/google_drive_sync.log.*
+failed_conversions/
+temp_downloads/
+credentials/

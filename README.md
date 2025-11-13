@@ -135,6 +135,89 @@ python3 knowledge_base/initialize_dataset.py --force
 - Failed documents are automatically retried on next sync
 - Look for `RETRY: filename (failed processing)` messages
 
+### Google Drive Integration (Optional)
+
+Automatically sync documents from Google Drive to the knowledge base.
+
+**Initial Setup:**
+
+1. **Get Google Cloud credentials:**
+   ```bash
+   # Follow guide: https://console.cloud.google.com/
+   # 1. Create/select project
+   # 2. Enable Google Drive API
+   # 3. Create OAuth 2.0 Desktop credentials
+   # 4. Download credentials JSON
+   ```
+
+2. **Configure credentials (K8s-friendly):**
+   ```bash
+   # Place credentials in project directory (works for local & K8s)
+   cp ~/Downloads/client_secret_*.json credentials/google_drive_credentials.json
+
+   # Credentials will be stored in: credentials/google_drive_token.pickle (auto-generated)
+   ```
+
+3. **Configure .env file:**
+   ```bash
+   # Add these lines to .env
+   GOOGLE_DRIVE_FOLDER_URL=https://drive.google.com/drive/folders/YOUR_FOLDER_ID
+   # Paths are project-relative (K8s-ready):
+   GOOGLE_DRIVE_CREDENTIALS_PATH=credentials/google_drive_credentials.json
+   GOOGLE_DRIVE_TOKEN_PATH=credentials/google_drive_token.pickle
+   ```
+
+4. **Run OAuth setup (one-time, local):**
+   ```bash
+   python scripts/setup_google_drive.py
+   # Browser will open - sign in and grant permissions
+   # Token saved to credentials/google_drive_token.pickle
+   ```
+
+**K8s Deployment:**
+   ```yaml
+   # Mount credentials as secrets
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: google-drive-creds
+   type: Opaque
+   data:
+     credentials.json: <base64-encoded-client-secret>
+     token.pickle: <base64-encoded-token>
+
+   # Mount in pod:
+   volumeMounts:
+     - name: google-creds
+       mountPath: /app/credentials
+       readOnly: true
+   ```
+
+**Usage:**
+
+```bash
+# Manual sync
+python -m src.google_drive_sync.sync_manager
+
+# Set up automatic hourly sync (cron)
+crontab -e
+# Add this line:
+0 * * * * /path/to/chatbot_ui_v2/scripts/sync_google_drive.sh
+```
+
+**How it works:**
+- Finds Google Sheet in Drive folder
+- Parses second column for document links
+- Downloads links as PDFs (Google Docs, web pages, etc.)
+- Only re-downloads changed files (efficient)
+- Automatically triggers RAGFlow sync
+- Logs all activity to `logs/google_drive_sync.log`
+
+**Supported link types:**
+- Google Docs/Sheets/Slides (exported as PDF)
+- Direct PDF URLs
+- Web pages (converted to PDF)
+
 ### Assistant Management
 
 **Create/update assistant:**
