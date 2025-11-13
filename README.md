@@ -206,17 +206,51 @@ crontab -e
 ```
 
 **How it works:**
-- Finds Google Sheet in Drive folder
-- Parses second column for document links
-- Downloads links as PDFs (Google Docs, web pages, etc.)
-- Only re-downloads changed files (efficient)
-- Automatically triggers RAGFlow sync
-- Logs all activity to `logs/google_drive_sync.log`
 
-**Supported link types:**
+The sync system operates in two phases:
+
+**Phase 1: Google Drive Download (Simple, Always Fresh)**
+```
+1. List all files in Google Drive folder
+2. Filter out spreadsheets (only keep documents & PDFs)
+3. Download every file:
+   - Google Docs/Sheets/Slides → Export as PDF via Drive API
+   - PDFs → Download directly
+4. Save to knowledge_base/ folder (overwrites if exists)
+
+Note: Downloads ALL files every time (no state tracking at Drive level)
+```
+
+**Phase 2: RAGFlow Sync (Smart, Change Detection)**
+```
+1. Read knowledge_base/ directory
+2. Compare with existing RAGFlow dataset
+3. Detect changes using file size comparison:
+   - NEW: File not in RAGFlow → Upload
+   - UPDATED: Size changed → Re-upload
+   - DELETED: In RAGFlow but not local → Remove
+   - UNCHANGED: Same size → Skip upload
+4. Apply changes to RAGFlow knowledge base
+
+State maintained: Only in RAGFlow database
+```
+
+**Where Checks Happen:**
+| Phase | Location | What's Checked | State Maintained |
+|-------|----------|----------------|------------------|
+| Google Drive | Drive API | None (downloads all) | ❌ No state file |
+| RAGFlow Sync | initialize_dataset.py | File size, processing status | ✅ RAGFlow DB |
+
+**Why This Design:**
+- **Simple**: No complex state tracking at Drive level
+- **Reliable**: Always in sync (no stale state issues)
+- **Efficient Upload**: RAGFlow only uploads changed files
+- **Trade-off**: Re-downloads unchanged files (bandwidth cost for simplicity)
+
+**Supported file types:**
 - Google Docs/Sheets/Slides (exported as PDF)
-- Direct PDF URLs
-- Web pages (converted to PDF)
+- PDF files (downloaded directly)
+- Spreadsheets are skipped automatically
 
 ### Assistant Management
 
