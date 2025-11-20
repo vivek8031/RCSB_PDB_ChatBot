@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# OAuth scopes required for readonly access
+# OAuth scopes required for Drive sync
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 
@@ -138,11 +138,16 @@ def setup_oauth():
         print(f"✓ OAuth token saved to: {token_path}")
         print("✓ Google Drive access granted")
         print()
-        print("You can now run the sync script:")
-        print("  python -m src.google_drive_sync.sync_manager")
+        print("You can now:")
+        print("  1. Sync from Google Drive:")
+        print("     python -m src.google_drive_sync.sync_manager")
         print()
-        print("Or set up a cron job:")
-        print("  See scripts/sync_google_drive.sh")
+        print("  2. Export feedback to Google Drive (CSV):")
+        print("     python scripts/export_feedback_to_drive.py")
+        print()
+        print("  3. Set up cron jobs:")
+        print("     See scripts/sync_google_drive.sh")
+        print("     See scripts/export_feedback.sh")
         print()
         return True
 

@@ -252,6 +252,95 @@ State maintained: Only in RAGFlow database
 - PDF files (downloaded directly)
 - Spreadsheets are skipped automatically
 
+### Feedback Export to Google Sheets (Optional)
+
+Export user conversations, feedback, and ratings to Google Sheets for analysis.
+
+**What Gets Exported:**
+- User questions and AI responses (Q&A pairs)
+- Feedback ratings (👍 thumbs-up / 👎 thumbs-down)
+- Feedback categories and comments
+- Referenced documents used by AI
+- Timestamps for all interactions
+- Organized by user and chat title
+
+**Initial Setup:**
+
+Uses the same OAuth credentials as Google Drive sync. If you've already set up Drive sync, just enable Sheets API:
+
+1. **Enable Google Sheets API:**
+   ```bash
+   # Go to Google Cloud Console: https://console.cloud.google.com/
+   # Navigate to: APIs & Services > Library
+   # Search for "Google Sheets API"
+   # Click "Enable"
+   ```
+
+2. **Re-authorize with Sheets scope:**
+   ```bash
+   # Remove old token
+   rm -f credentials/google_drive_token.pickle
+
+   # Re-run OAuth setup (grants both Drive and Sheets access)
+   python scripts/setup_google_drive.py
+   # Browser will open - sign in and grant permissions
+   ```
+
+3. **Configure .env file (optional):**
+   ```bash
+   # Add these lines to .env
+   GOOGLE_SHEETS_EXPORT_SPREADSHEET_ID=  # Leave empty to create new spreadsheet
+   GOOGLE_SHEETS_EXPORT_SPREADSHEET_NAME=RCSB_ChatBot_Feedback_Export
+   GOOGLE_DRIVE_EXPORT_FOLDER_ID=  # Optional: folder to create spreadsheet in
+   ```
+
+**Usage:**
+
+```bash
+# Manual export
+python scripts/export_feedback_to_drive.py
+
+# Set up automatic daily export (cron)
+crontab -e
+# Add this line:
+0 0 * * * /path/to/chatbot_ui_v2/scripts/export_feedback.sh
+```
+
+**Spreadsheet Structure:**
+
+Each row represents one Q&A interaction:
+
+| Column | Description |
+|--------|-------------|
+| Export ID | Unique identifier for this Q&A pair |
+| User ID | Which user asked the question |
+| Chat Title | Topic/title of the conversation |
+| Question Timestamp | When the question was asked |
+| User Question | The user's question text |
+| Answer Timestamp | When AI responded |
+| AI Response | The AI's answer text |
+| Feedback Rating | 👍 Positive or 👎 Negative (if provided) |
+| Feedback Categories | Tags like "incorrect", "incomplete" (if provided) |
+| Feedback Comment | User's written feedback (if provided) |
+| Feedback Timestamp | When feedback was given |
+| Referenced Documents | Which knowledge base documents AI used |
+
+**How It Works:**
+
+1. **Extraction:** Reads all `user_data/*.json` files
+2. **Pairing:** Matches user questions with AI responses
+3. **Deduplication:** Only appends new Q&A pairs (checks message IDs)
+4. **Upload:** Appends to Google Sheet with formatting
+5. **Result:** Clean, readable spreadsheet for non-technical users
+
+**Features:**
+
+- **Append-only:** New data added without deleting existing rows
+- **No duplicates:** Tracks exported message IDs to avoid re-exporting
+- **Formatted:** Frozen header row, wrapped text, auto-filter enabled
+- **Collaborative:** Multiple people can view/analyze the spreadsheet
+- **Manual edits preserved:** Your spreadsheet changes won't be overwritten
+
 ### Assistant Management
 
 **Create/update assistant:**
