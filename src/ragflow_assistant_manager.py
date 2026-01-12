@@ -6,9 +6,22 @@ Intelligent management of RAGFlow chat assistants with automated creation, confi
 
 import os
 import time
-from typing import Dict, List, Optional, Any, Generator
+from typing import Dict, List, Optional, Any, Generator, TypeVar
 from dataclasses import dataclass
 from datetime import datetime
+
+# Type variable for generic safe list functions
+T = TypeVar('T')
+
+
+def safe_list(items: Optional[List[T]]) -> List[T]:
+    """
+    Ensure we always have a list, never None.
+
+    Defensive helper to handle RAGFlow SDK methods that may return None
+    instead of an empty list in some edge cases.
+    """
+    return items if items is not None else []
 
 try:
     from dotenv import load_dotenv
@@ -90,7 +103,9 @@ class RAGFlowAssistantManager:
         try:
             # Try to find existing dataset
             datasets = self.ragflow_client.list_datasets(name=dataset_name)
-            if datasets:
+            # Defensive: ensure we have a list and check length before indexing
+            datasets = safe_list(datasets)
+            if len(datasets) > 0:
                 dataset_id = datasets[0].id
                 self._dataset_cache[dataset_name] = dataset_id
                 print(f"✅ Found existing dataset: {dataset_name} (ID: {dataset_id})")
@@ -143,7 +158,9 @@ class RAGFlowAssistantManager:
         try:
             # Try to find existing assistant
             assistants = self.ragflow_client.list_chats(name=config.name)
-            if assistants:
+            # Defensive: ensure we have a list and check length before indexing
+            assistants = safe_list(assistants)
+            if len(assistants) > 0:
                 assistant = assistants[0]
 
                 # Update configuration if needed
@@ -230,7 +247,9 @@ class RAGFlowAssistantManager:
             # Get assistant if not cached
             if not self._current_assistant or self._current_assistant.id != assistant_id:
                 assistants = self.ragflow_client.list_chats(id=assistant_id)
-                if not assistants:
+                # Defensive: ensure we have a list and check length before indexing
+                assistants = safe_list(assistants)
+                if len(assistants) == 0:
                     raise ValueError(f"Assistant {assistant_id} not found")
                 self._current_assistant = assistants[0]
 
@@ -261,7 +280,9 @@ class RAGFlowAssistantManager:
                 raise ValueError("No current assistant available")
 
             sessions = self._current_assistant.list_sessions(id=session_id)
-            if not sessions:
+            # Defensive: ensure we have a list and check length before indexing
+            sessions = safe_list(sessions)
+            if len(sessions) == 0:
                 raise ValueError(f"Session {session_id} not found")
 
             session = sessions[0]
@@ -309,6 +330,8 @@ class RAGFlowAssistantManager:
         """List all available chat assistants"""
         try:
             assistants = self.ragflow_client.list_chats()
+            # Defensive: ensure we have a list, never None
+            assistants = safe_list(assistants)
             return [
                 {
                     "id": assistant.id,

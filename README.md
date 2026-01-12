@@ -135,6 +135,212 @@ python3 knowledge_base/initialize_dataset.py --force
 - Failed documents are automatically retried on next sync
 - Look for `RETRY: filename (failed processing)` messages
 
+### Google Drive Integration (Optional)
+
+Automatically sync documents from Google Drive to the knowledge base.
+
+**Initial Setup:**
+
+1. **Get Google Cloud credentials:**
+   ```bash
+   # Follow guide: https://console.cloud.google.com/
+   # 1. Create/select project
+   # 2. Enable Google Drive API
+   # 3. Create OAuth 2.0 Desktop credentials
+   # 4. Download credentials JSON
+   ```
+
+2. **Configure credentials (K8s-friendly):**
+   ```bash
+   # Place credentials in project directory (works for local & K8s)
+   cp ~/Downloads/client_secret_*.json credentials/google_drive_credentials.json
+
+   # Credentials will be stored in: credentials/google_drive_token.pickle (auto-generated)
+   ```
+
+3. **Configure .env file:**
+   ```bash
+   # Add these lines to .env
+   GOOGLE_DRIVE_FOLDER_URL=https://drive.google.com/drive/folders/YOUR_FOLDER_ID
+   # Paths are project-relative (K8s-ready):
+   GOOGLE_DRIVE_CREDENTIALS_PATH=credentials/google_drive_credentials.json
+   GOOGLE_DRIVE_TOKEN_PATH=credentials/google_drive_token.pickle
+   ```
+
+4. **Run OAuth setup (one-time, local):**
+   ```bash
+   python scripts/setup_google_drive.py
+   # Browser will open - sign in and grant permissions
+   # Token saved to credentials/google_drive_token.pickle
+   ```
+
+**K8s Deployment:**
+   ```yaml
+   # Mount credentials as secrets
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: google-drive-creds
+   type: Opaque
+   data:
+     credentials.json: <base64-encoded-client-secret>
+     token.pickle: <base64-encoded-token>
+
+   # Mount in pod:
+   volumeMounts:
+     - name: google-creds
+       mountPath: /app/credentials
+       readOnly: true
+   ```
+
+**Usage:**
+
+```bash
+# Manual sync
+python -m src.google_drive_sync.sync_manager
+
+# Set up automatic hourly sync (cron)
+crontab -e
+# Add this line:
+0 * * * * /path/to/chatbot_ui_v2/scripts/sync_google_drive.sh
+```
+
+**How it works:**
+
+The sync system operates in two phases:
+
+**Phase 1: Google Drive Download (Simple, Always Fresh)**
+```
+1. List all files in Google Drive folder
+2. Filter out spreadsheets (only keep documents & PDFs)
+3. Download every file:
+   - Google Docs/Sheets/Slides → Export as PDF via Drive API
+   - PDFs → Download directly
+4. Save to knowledge_base/ folder (overwrites if exists)
+
+Note: Downloads ALL files every time (no state tracking at Drive level)
+```
+
+**Phase 2: RAGFlow Sync (Smart, Change Detection)**
+```
+1. Read knowledge_base/ directory
+2. Compare with existing RAGFlow dataset
+3. Detect changes using file size comparison:
+   - NEW: File not in RAGFlow → Upload
+   - UPDATED: Size changed → Re-upload
+   - DELETED: In RAGFlow but not local → Remove
+   - UNCHANGED: Same size → Skip upload
+4. Apply changes to RAGFlow knowledge base
+
+State maintained: Only in RAGFlow database
+```
+
+**Where Checks Happen:**
+| Phase | Location | What's Checked | State Maintained |
+|-------|----------|----------------|------------------|
+| Google Drive | Drive API | None (downloads all) | ❌ No state file |
+| RAGFlow Sync | initialize_dataset.py | File size, processing status | ✅ RAGFlow DB |
+
+**Why This Design:**
+- **Simple**: No complex state tracking at Drive level
+- **Reliable**: Always in sync (no stale state issues)
+- **Efficient Upload**: RAGFlow only uploads changed files
+- **Trade-off**: Re-downloads unchanged files (bandwidth cost for simplicity)
+
+**Supported file types:**
+- Google Docs/Sheets/Slides (exported as PDF)
+- PDF files (downloaded directly)
+- Spreadsheets are skipped automatically
+
+### Feedback Export to Google Sheets (Optional)
+
+Export user conversations, feedback, and ratings to Google Sheets for analysis.
+
+**What Gets Exported:**
+- User questions and AI responses (Q&A pairs)
+- Feedback ratings (👍 thumbs-up / 👎 thumbs-down)
+- Feedback categories and comments
+- Referenced documents used by AI
+- Timestamps for all interactions
+- Organized by user and chat title
+
+**Initial Setup:**
+
+Uses the same OAuth credentials as Google Drive sync. If you've already set up Drive sync, just enable Sheets API:
+
+1. **Enable Google Sheets API:**
+   ```bash
+   # Go to Google Cloud Console: https://console.cloud.google.com/
+   # Navigate to: APIs & Services > Library
+   # Search for "Google Sheets API"
+   # Click "Enable"
+   ```
+
+2. **Re-authorize with Sheets scope:**
+   ```bash
+   # Remove old token
+   rm -f credentials/google_drive_token.pickle
+
+   # Re-run OAuth setup (grants both Drive and Sheets access)
+   python scripts/setup_google_drive.py
+   # Browser will open - sign in and grant permissions
+   ```
+
+3. **Configure .env file (optional):**
+   ```bash
+   # Add these lines to .env
+   GOOGLE_SHEETS_EXPORT_SPREADSHEET_ID=  # Leave empty to create new spreadsheet
+   GOOGLE_SHEETS_EXPORT_SPREADSHEET_NAME=RCSB_ChatBot_Feedback_Export
+   GOOGLE_DRIVE_EXPORT_FOLDER_ID=  # Optional: folder to create spreadsheet in
+   ```
+
+**Usage:**
+
+```bash
+# Manual export
+python scripts/export_feedback_to_drive.py
+
+# Set up automatic daily export (cron)
+crontab -e
+# Add this line:
+0 0 * * * /path/to/chatbot_ui_v2/scripts/export_feedback.sh
+```
+
+**Spreadsheet Structure:**
+
+Each row represents one Q&A interaction:
+
+| Column | Description |
+|--------|-------------|
+| Export ID | Unique identifier for this Q&A pair |
+| User ID | Which user asked the question |
+| Chat Title | Topic/title of the conversation |
+| Question Timestamp | When the question was asked |
+| User Question | The user's question text |
+| Answer Timestamp | When AI responded |
+| AI Response | The AI's answer text |
+| Feedback Rating | 👍 Positive or 👎 Negative (if provided) |
+| Feedback Categories | Tags like "incorrect", "incomplete" (if provided) |
+| Feedback Comment | User's written feedback (if provided) |
+| Feedback Timestamp | When feedback was given |
+| Referenced Documents | Which knowledge base documents AI used |
+
+**How It Works:**
+
+1. **Extraction:** Reads all `user_data/*.json` files
+2. **Pairing:** Matches user questions with AI responses
+3. **Deduplication:** Only appends new Q&A pairs (checks message IDs)
+4. **Upload:** Appends to Google Sheet with formatting
+5. **Result:** Clean, readable spreadsheet for non-technical users
+
+**Features:**
+
+- **Append-only:** New data added without deleting existing rows
+- **No duplicates:** Tracks exported message IDs to avoid re-exporting
+- **Formatted:** Frozen header row, wrapped text, auto-filter enabled
+- **Collaborative:** Multiple people can view/analyze the spreadsheet
+- **Manual edits preserved:** Your spreadsheet changes won't be overwritten
+
 ### Assistant Management
 
 **Create/update assistant:**
