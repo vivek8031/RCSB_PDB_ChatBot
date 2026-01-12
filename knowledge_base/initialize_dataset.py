@@ -11,9 +11,23 @@ import sys
 import time
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TypeVar
 from dataclasses import dataclass
 from collections import namedtuple
+import functools
+
+# Type variable for generic safe list functions
+T = TypeVar('T')
+
+
+def safe_list(items: Optional[List[T]]) -> List[T]:
+    """
+    Ensure we always have a list, never None.
+
+    Defensive helper to handle RAGFlow SDK methods that may return None
+    instead of an empty list in some edge cases.
+    """
+    return items if items is not None else []
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
@@ -133,6 +147,8 @@ class KnowledgeBaseInitializer:
         """Get existing documents in dataset mapped by filename"""
         try:
             documents = dataset.list_documents()
+            # Defensive: ensure we have a list, never None
+            documents = safe_list(documents)
             docs_map = {doc.name: doc for doc in documents}
             self.logger.info(f"Found {len(docs_map)} existing documents in dataset")
             return docs_map
@@ -240,21 +256,38 @@ class KnowledgeBaseInitializer:
             raise
 
     def process_changed_documents(self, dataset: Any, doc_ids: List[str]) -> None:
-        """Process only the changed documents"""
+        """Process only the changed documents with retry logic"""
         if not doc_ids:
             self.logger.info("No documents to process")
             return
-            
+
         try:
             self.logger.info(f"Starting processing for {len(doc_ids)} changed documents...")
-            dataset.async_parse_documents(doc_ids)
-            
+            # Use retry logic for async_parse_documents
+            self._safe_async_parse(dataset, doc_ids)
+
             # Monitor processing progress for changed documents only
             self.monitor_processing_progress(dataset, doc_ids)
-            
+
         except Exception as e:
             self.logger.error(f"Failed to process changed documents: {e}")
             raise
+
+    def _safe_async_parse(self, dataset: Any, doc_ids: List[str], max_retries: int = 3) -> None:
+        """Safely call async_parse_documents with retry logic"""
+        delay = 1.0
+        for attempt in range(max_retries):
+            try:
+                dataset.async_parse_documents(doc_ids)
+                self.logger.info(f"Successfully started parsing for {len(doc_ids)} documents")
+                return
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    self.logger.error(f"Failed to start parsing after {max_retries} attempts: {e}")
+                    raise
+                self.logger.warning(f"Parse attempt {attempt + 1} failed: {e}, retrying in {delay}s...")
+                time.sleep(delay)
+                delay *= 2
 
     def create_optimal_dataset_config(self) -> Dict[str, Any]:
         """Create optimal dataset configuration for scientific documents"""
@@ -301,6 +334,8 @@ class KnowledgeBaseInitializer:
         """Check if knowledge base dataset already exists"""
         try:
             datasets = self.ragflow_client.list_datasets()
+            # Defensive: ensure we have a list, never None
+            datasets = safe_list(datasets)
             for dataset in datasets:
                 if dataset.name == self.config.name:
                     self.logger.info(f"Found existing dataset: {dataset.id}")
@@ -357,6 +392,8 @@ class KnowledgeBaseInitializer:
 
         try:
             documents = dataset.list_documents()
+            # Defensive: ensure we have a list, never None
+            documents = safe_list(documents)
 
             txt_files_configured = 0
             for doc in documents:
@@ -387,6 +424,8 @@ class KnowledgeBaseInitializer:
         try:
             # Get uploaded documents
             documents = dataset.list_documents()
+            # Defensive: ensure we have a list, never None
+            documents = safe_list(documents)
             doc_ids = [doc.id for doc in documents]
 
             if not doc_ids:
@@ -412,6 +451,8 @@ class KnowledgeBaseInitializer:
         while time.time() - start_time < timeout:
             try:
                 documents = dataset.list_documents()
+                # Defensive: ensure we have a list, never None
+                documents = safe_list(documents)
 
                 completed = 0
                 failed = 0
@@ -463,6 +504,8 @@ class KnowledgeBaseInitializer:
         """Get processing metrics and quality indicators"""
         try:
             documents = dataset.list_documents()
+            # Defensive: ensure we have a list, never None
+            documents = safe_list(documents)
 
             total_docs = len(documents)
             total_chunks = sum(getattr(doc, 'chunk_count', 0) for doc in documents)
@@ -612,6 +655,8 @@ class KnowledgeBaseInitializer:
                 
                 # Count all as new
                 docs = dataset.list_documents()
+                # Defensive: ensure we have a list, never None
+                docs = safe_list(docs)
                 return SyncResults(
                     dataset_id=dataset.id,
                     new_documents=len(docs),
