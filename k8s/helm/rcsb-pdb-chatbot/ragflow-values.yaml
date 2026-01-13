@@ -1,0 +1,33 @@
+# =============================================================================
+# RAGFlow Helm Chart - RCSB Overrides Only
+#
+# This file contains ONLY the RCSB-specific overrides.
+# All other values use RAGFlow's defaults.
+#
+# Deploy: helm upgrade --install ragflow /tmp/ragflow/helm \
+#           -f ragflow-values.yaml -n vivek-chithari --wait
+#
+# When RAGFlow updates their chart, this file should still work
+# because we only override what we need to change.
+# =============================================================================
+
+# --- Environment overrides ---
+env:
+  TZ: "America/Los_Angeles"
+
+# --- Storage class override (RCSB uses Ceph) ---
+infinity:
+  storage:
+    className: csi-cephfs-sc
+
+mysql:
+  storage:
+    className: csi-cephfs-sc
+
+minio:
+  storage:
+    className: csi-cephfs-sc
+
+redis:
+  storage:
+    className: csi-cephfs-sc

@@ -1,0 +1,32 @@
+===============================================================================
+  RCSB PDB Chatbot has been deployed!
+===============================================================================
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  https://{{ $host.host }}
+{{- end }}
+{{- else }}
+  kubectl port-forward svc/{{ include "rcsb-pdb-chatbot.fullname" . }} 8501:{{ .Values.service.port }} -n {{ .Release.Namespace }}
+  Then access: http://localhost:8501
+{{- end }}
+
+2. Check pod status:
+  kubectl get pods -l app.kubernetes.io/name={{ include "rcsb-pdb-chatbot.name" . }} -n {{ .Release.Namespace }}
+
+3. View logs:
+  kubectl logs -f deploy/{{ include "rcsb-pdb-chatbot.fullname" . }} -n {{ .Release.Namespace }}
+
+4. Check TLS certificate (if ingress enabled):
+  kubectl get certificate -n {{ .Release.Namespace }}
+
+5. Knowledge Base Initialization:
+  The KB init job runs automatically after install. Check status:
+  kubectl get jobs -n {{ .Release.Namespace }}
+
+6. Verify RAGFlow connectivity:
+  kubectl exec -it deploy/{{ include "rcsb-pdb-chatbot.fullname" . }} -n {{ .Release.Namespace }} -- \
+    curl -s http://ragflow-ragflow:9380/health
+
+For more information, see: docs/k8s-deployment/k8s-deployment-plan.md

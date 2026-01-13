@@ -1,0 +1,202 @@
+# =============================================================================
+# RCSB PDB Chatbot Helm Chart Values
+# =============================================================================
+
+# -- Number of replicas
+replicaCount: 1
+
+# -- Image configuration
+image:
+  repository: harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# -- Image pull secrets for Harbor registry
+imagePullSecrets:
+  - name: harbor-docker-registry-conf
+
+# -- Service account configuration
+serviceAccount:
+  create: true
+  name: rcsb-pdb-chatbot-sa
+  annotations: {}
+
+# -- Service configuration
+service:
+  type: ClusterIP
+  port: 8501
+  targetPort: 8501
+
+# -- Ingress configuration
+ingress:
+  enabled: true
+  className: haproxy
+  annotations:
+    cert-manager.io/cluster-issuer: rutgers-acme
+    haproxy.org/ssl-redirect: "true"
+    haproxy.org/timeout-server: "300s"
+    haproxy.org/timeout-client: "300s"
+  hosts:
+    - host: pdb-chatbot.k8s.rcsb.org
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: pdb-chatbot-tls
+      hosts:
+        - pdb-chatbot.k8s.rcsb.org
+
+# -- Health checks
+livenessProbe:
+  httpGet:
+    path: /_stcore/health
+    port: 8501
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /_stcore/health
+    port: 8501
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Resource limits and requests
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+  requests:
+    cpu: "500m"
+    memory: 1Gi
+
+# -- Persistent storage configuration
+persistence:
+  userData:
+    enabled: true
+    storageClass: csi-cephfs-sc
+    accessMode: ReadWriteMany
+    size: 10Gi
+    mountPath: /app/user_data
+
+  credentials:
+    enabled: true
+    storageClass: csi-cephfs-sc
+    accessMode: ReadWriteOnce
+    size: 100Mi
+    mountPath: /app/credentials
+
+  knowledgeBase:
+    enabled: true
+    storageClass: csi-cephfs-sc
+    accessMode: ReadWriteMany
+    size: 20Gi
+    mountPath: /app/knowledge_base
+
+# -- Environment variables (non-sensitive, stored in ConfigMap)
+config:
+  APP_PORT: "8501"
+  APP_HOST: "0.0.0.0"
+  # RAGFlow connection - uses internal K8s DNS
+  RAGFLOW_BASE_URL: "http://ragflow-ragflow.vivek-chithari.svc.cluster.local:9380"
+  RAGFLOW_ASSISTANT_NAME: "RCSB ChatBot v2"
+  RAGFLOW_DATASET_NAME: "rcsb_pdb_knowledge_base"
+  RAGFLOW_MODEL_NAME: "gpt-4-turbo"
+  RAGFLOW_TEMPERATURE: "0.1"
+  RAGFLOW_TOP_P: "0.3"
+  RAGFLOW_PRESENCE_PENALTY: "0.2"
+  RAGFLOW_FREQUENCY_PENALTY: "0.7"
+  RAGFLOW_SIMILARITY_THRESHOLD: "0.2"
+  RAGFLOW_KEYWORDS_WEIGHT: "0.7"
+  RAGFLOW_TOP_N: "8"
+  RAGFLOW_TOP_K: "1024"
+  RAGFLOW_SHOW_QUOTE: "true"
+  USER_DATA_DIR: "/app/user_data"
+  DEBUG_MODE: "false"
+  SHOW_CONFIG_METRICS: "false"
+  SHOW_PROMPT_EDITOR: "false"
+  LOG_LEVEL: "INFO"
+  # Google Drive configuration
+  GOOGLE_DRIVE_CREDENTIALS_PATH: "/app/credentials/google_drive_credentials.json"
+  GOOGLE_DRIVE_TOKEN_PATH: "/app/credentials/google_drive_token.pickle"
+  GOOGLE_DRIVE_SYNC_INTERVAL: "3600"
+  GOOGLE_DRIVE_MAX_FILE_SIZE_MB: "100"
+  GOOGLE_DRIVE_DOWNLOAD_TIMEOUT: "300"
+  GOOGLE_DRIVE_ENABLE_NOTIFICATIONS: "false"
+  FEEDBACK_EXPORT_DIR: "/app/exports"
+
+# -- Secrets configuration (references pre-created secrets)
+secrets:
+  name: chatbot-secrets
+  keys:
+    ragflowApiKey: RAGFLOW_API_KEY
+    openaiApiKey: OPENAI_API_KEY
+    googleDriveFolderUrl: GOOGLE_DRIVE_FOLDER_URL
+    googleDriveExportFolderId: GOOGLE_DRIVE_EXPORT_FOLDER_ID
+
+# -- Google Drive credentials secret
+googleDriveCredentials:
+  secretName: gdrive-credentials
+  credentialsKey: credentials.json
+  tokenKey: token.pickle
+
+# -- CronJobs configuration
+cronJobs:
+  googleDriveSync:
+    enabled: true
+    schedule: "0 */6 * * *"  # Every 6 hours
+    command: ["python", "google_drive_sync/sync_manager.py"]
+    resources:
+      limits:
+        cpu: "500m"
+        memory: 512Mi
+      requests:
+        cpu: "100m"
+        memory: 256Mi
+
+  feedbackExport:
+    enabled: true
+    schedule: "0 0 * * 0"  # Weekly on Sunday at midnight
+    command: ["python", "feedback_export/export_manager.py"]
+    resources:
+      limits:
+        cpu: "500m"
+        memory: 512Mi
+      requests:
+        cpu: "100m"
+        memory: 256Mi
+
+# -- Knowledge base initialization job
+kbInit:
+  enabled: true
+  command: ["python", "/app/knowledge_base/initialize_dataset.py", "--sync"]
+  resources:
+    limits:
+      cpu: "1"
+      memory: 2Gi
+    requests:
+      cpu: "250m"
+      memory: 512Mi
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity rules
+affinity: {}
+
+# -- Pod security context
+podSecurityContext:
+  fsGroup: 1000
+
+# -- Container security context
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true

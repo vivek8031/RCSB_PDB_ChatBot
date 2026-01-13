@@ -1,0 +1,15 @@
+{{- if .Values.persistence.knowledgeBase.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "rcsb-pdb-chatbot.pvcKnowledgeBase" . }}
+  labels:
+    {{- include "rcsb-pdb-chatbot.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.knowledgeBase.accessMode }}
+  storageClassName: {{ .Values.persistence.knowledgeBase.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.knowledgeBase.size }}
+{{- end }}

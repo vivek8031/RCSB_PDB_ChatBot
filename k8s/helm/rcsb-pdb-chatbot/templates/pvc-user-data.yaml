@@ -1,0 +1,15 @@
+{{- if .Values.persistence.userData.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "rcsb-pdb-chatbot.pvcUserData" . }}
+  labels:
+    {{- include "rcsb-pdb-chatbot.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.userData.accessMode }}
+  storageClassName: {{ .Values.persistence.userData.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.userData.size }}
+{{- end }}

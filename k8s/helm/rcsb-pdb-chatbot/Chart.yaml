@@ -1,0 +1,18 @@
+apiVersion: v2
+name: rcsb-pdb-chatbot
+description: RCSB PDB Multi-User Research Chatbot with RAGFlow Integration
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - streamlit
+  - chatbot
+  - rcsb-pdb
+  - ragflow
+  - protein-data-bank
+maintainers:
+  - name: Vivek Chithari
+    email: vivek.chithari@rcsb.org
+home: https://github.com/rcsb/rcsb-pdb-chatbot
+sources:
+  - https://github.com/rcsb/rcsb-pdb-chatbot
