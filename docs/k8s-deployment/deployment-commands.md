@@ -119,19 +119,21 @@ ragflow-env-config              Opaque                           21     Xm
 # Login to Harbor (use OIDC username and CLI secret)
 docker login harbor.devops.k8s.rcsb.org
 
-# Build for AMD64 (required for K8s cluster)
+# Build for AMD64 and push with 'latest' tag (recommended approach)
 docker buildx build --platform linux/amd64 \
-  -t harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:1.0.0 \
+  -t harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:latest \
   --push .
 
 # OR build and push separately:
 docker buildx build --platform linux/amd64 \
-  -t harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:1.0.0 .
+  -t harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:latest .
 
-docker push harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:1.0.0
+docker push harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:latest
 ```
 
-**Note:** If you build without `--platform linux/amd64` on an Apple Silicon Mac, you'll get `exec format error` in the pod.
+**Notes:**
+- If you build without `--platform linux/amd64` on an Apple Silicon Mac, you'll get `exec format error` in the pod.
+- We use `latest` tag with `imagePullPolicy: Always` in values.yaml to avoid version tag management headaches.
 
 ---
 
@@ -297,8 +299,24 @@ kubectl get pods -n vivek-chithari
 
 ## Updating Chatbot
 
+Since we use `latest` tag with `imagePullPolicy: Always`, updating is simple:
+
 ```bash
-# Build new image with new tag
+# Build and push new image (same tag)
+docker buildx build --platform linux/amd64 \
+  -t harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:latest \
+  --push .
+
+# Restart deployment to pull new image
+kubectl rollout restart deploy/rcsb-pdb-chatbot -n vivek-chithari
+
+# Monitor rollout
+kubectl rollout status deploy/rcsb-pdb-chatbot -n vivek-chithari
+```
+
+**Alternative (if you want to use versioned tags):**
+```bash
+# Build with version tag
 docker buildx build --platform linux/amd64 \
   -t harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:1.0.1 \
   --push .
