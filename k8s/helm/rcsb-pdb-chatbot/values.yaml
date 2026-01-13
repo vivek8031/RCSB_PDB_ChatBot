@@ -95,14 +95,15 @@ persistence:
     storageClass: csi-cephfs-sc
     accessMode: ReadWriteMany
     size: 20Gi
-    mountPath: /app/knowledge_base
+    # Mount at different path to avoid overwriting Docker image's knowledge_base scripts
+    mountPath: /app/knowledge_base_data
 
 # -- Environment variables (non-sensitive, stored in ConfigMap)
 config:
   APP_PORT: "8501"
   APP_HOST: "0.0.0.0"
   # RAGFlow connection - uses internal K8s DNS
-  RAGFLOW_BASE_URL: "http://ragflow-ragflow.vivek-chithari.svc.cluster.local:9380"
+  RAGFLOW_BASE_URL: "http://ragflow-api.vivek-chithari.svc.cluster.local"
   RAGFLOW_ASSISTANT_NAME: "RCSB ChatBot v2"
   RAGFLOW_DATASET_NAME: "rcsb_pdb_knowledge_base"
   RAGFLOW_MODEL_NAME: "gpt-4-turbo"
@@ -171,9 +172,10 @@ cronJobs:
         memory: 256Mi
 
 # -- Knowledge base initialization job
+# Runs both dataset creation AND assistant setup
 kbInit:
   enabled: true
-  command: ["python", "/app/knowledge_base/initialize_dataset.py", "--sync"]
+  command: ["/bin/sh", "-c", "cd /app && python knowledge_base/initialize_dataset.py --sync && python ragflow_assistant_manager.py"]
   resources:
     limits:
       cpu: "1"

@@ -36,6 +36,9 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 # Copy application source code
 COPY src/ .
 
+# Copy knowledge base scripts and documents (for KB init job)
+COPY knowledge_base/ knowledge_base/
+
 # Create user data directory with proper permissions
 RUN mkdir -p user_data && chmod 755 user_data
 

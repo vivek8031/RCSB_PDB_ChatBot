@@ -184,7 +184,13 @@ class GoogleDriveSyncManager:
         """
         try:
             # Get path to initialize_dataset.py
-            project_root = Path(__file__).parent.parent.parent
+            # Detect container environment vs local development
+            if os.path.exists("/app/knowledge_base"):
+                # Running in container
+                project_root = Path("/app")
+            else:
+                # Running locally
+                project_root = Path(__file__).resolve().parent.parent.parent
             script_path = project_root / "knowledge_base" / "initialize_dataset.py"
 
             if not script_path.exists():
