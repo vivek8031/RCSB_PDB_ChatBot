@@ -75,7 +75,7 @@ kubectl port-forward svc/ragflow 8080:80 -n vivek-chithari &
 4. Save this for Step 3
 
 ### 2.3 Configure OpenAI Model Provider (CRITICAL)
-This step is required for the knowledge base to work:
+This step is required for the knowledge base and chat to work:
 
 1. Go to **User Profile** → **Model Providers** (or **Settings** → **Model Management**)
 2. Click **Add Model Provider**
@@ -83,7 +83,12 @@ This step is required for the knowledge base to work:
 4. Enter your **OpenAI API Key**
 5. Click **Save**
 
-**Note:** Without this step, the KB init job will fail with `Unauthorized model: text-embedding-3-large@OpenAI`
+**Important:** Ensure BOTH embedding models AND chat models (LLM) are enabled:
+- **Embedding models**: `text-embedding-3-large` (for document processing)
+- **Chat models**: `gpt-4-turbo`, `gpt-4`, etc. (for assistant responses)
+
+**Note:** Without embedding model, KB init fails with `Unauthorized model: text-embedding-3-large@OpenAI`
+**Note:** Without LLM model, chat responses show `Model(@None) not authorized`
 
 ```bash
 # Kill port forward when done
@@ -172,7 +177,38 @@ kubectl get ingress -n vivek-chithari
 
 ---
 
-## Step 6: Verify Deployment
+## Step 6: Verify KB Init Job
+
+The Helm chart automatically runs a Knowledge Base initialization job that:
+1. Creates the RAGFlow dataset (`rcsb_pdb_knowledge_base`)
+2. Uploads and processes documents from `knowledge_base/` directory
+3. Creates the RAGFlow assistant (`RCSB ChatBot v2`)
+
+```bash
+# Check KB init job status
+kubectl get jobs -n vivek-chithari | grep kb-init
+
+# View KB init logs
+kubectl logs job/rcsb-pdb-chatbot-kb-init -n vivek-chithari
+
+# Expected output (successful):
+# - "Dataset created successfully"
+# - "Successfully uploaded X documents"
+# - "Created new assistant: RCSB ChatBot v2"
+```
+
+**If KB init fails:**
+- Check RAGFlow Model Providers has OpenAI configured (Step 2.3)
+- Check secrets have correct API keys
+- Re-run by deleting job and upgrading helm:
+  ```bash
+  kubectl delete job rcsb-pdb-chatbot-kb-init -n vivek-chithari
+  helm upgrade rcsb-pdb-chatbot k8s/helm/rcsb-pdb-chatbot -n vivek-chithari
+  ```
+
+---
+
+## Step 7: Verify Deployment
 
 ```bash
 # Check all resources
@@ -187,6 +223,11 @@ kubectl logs -f deploy/rcsb-pdb-chatbot -n vivek-chithari
 # Test health endpoint (after ingress is ready)
 curl https://pdb-chatbot.k8s.rcsb.org/_stcore/health
 ```
+
+**Access the chatbot:**
+- URL: https://pdb-chatbot.k8s.rcsb.org
+- Login with any research ID
+- Create a chat and test messaging
 
 ---
 
