@@ -231,6 +231,90 @@ curl https://pdb-chatbot.k8s.rcsb.org/_stcore/health
 
 ---
 
+## Known Issues & Solutions
+
+### "Model(@None) not authorized" Error
+
+**Symptom:** Chat responses show `Model(@None) not authorized` error.
+
+**Cause:** The LLM model is not properly configured in RAGFlow or the assistant wasn't created with the correct model settings.
+
+**Solution:**
+1. Access RAGFlow UI via port-forward: `kubectl port-forward svc/ragflow 8080:80 -n vivek-chithari`
+2. Go to **User Profile** → **Model Providers**
+3. Ensure OpenAI is configured with a valid API key
+4. Verify that chat models are enabled (e.g., `gpt-4-turbo`, `gpt-4o-mini`)
+5. Delete and recreate the assistant in RAGFlow UI, selecting a valid LLM model
+
+### RAGFlow API Bug with LLM Settings
+
+**Issue:** When programmatically updating assistant settings, RAGFlow throws `KeyError('model_type')` if `llm` block is included in the update payload.
+
+**Workaround:** The code has been updated to NOT include `llm` settings in API updates. LLM configuration must be done via RAGFlow UI instead.
+
+**Affected file:** `src/ragflow_assistant_manager.py` (see comments in code)
+
+---
+
+## Performance Analysis
+
+### Response Time Breakdown (~22 seconds total)
+
+| Component | Time | Notes |
+|-----------|------|-------|
+| Direct OpenAI API call | ~3 seconds | Fast - not the bottleneck |
+| RAGFlow RAG processing | ~19 seconds | Query embedding, vector search, context assembly |
+| Code overhead | ~100-400ms | Minimal impact |
+
+**Key Finding:** The ~22 second response time is due to RAGFlow's internal RAG processing, NOT Kubernetes scaling or resource constraints.
+
+### Current Pod Resource Usage
+
+```
+NAME                           CPU     MEMORY
+ragflow                        54m     5.6GB   (no limits - BestEffort QoS)
+ragflow-infinity               1m      1.1GB
+ragflow-mysql                  2m      456Mi
+rcsb-pdb-chatbot              1m      47Mi    (barely using resources)
+```
+
+### Will K8s Scaling Help?
+
+| Action | Response Time | Concurrent Users |
+|--------|--------------|------------------|
+| Scale chatbot replicas | ❌ No improvement | ✅ Helps |
+| Scale RAGFlow replicas | ❌ No improvement | ✅ Helps |
+| Add HPA autoscaling | ❌ No improvement | ✅ Helps |
+
+**Answer:** Scaling pods will NOT reduce response time. The bottleneck is RAGFlow's internal processing.
+
+---
+
+## RAGFlow Performance Optimization
+
+To reduce response time, adjust these settings in **RAGFlow UI** (http://localhost:8080):
+
+### Settings to Disable (for faster responses)
+
+1. **Multi-turn optimization** - Chat Configuration → Prompt Engine
+2. **Rerank model** - Leave empty (slow without GPU)
+3. **Keyword analysis** - Assistant settings
+4. **Reasoning toggle** - Assistant settings
+
+### Settings to Adjust
+
+| Setting | Current | Recommended | Effect |
+|---------|---------|-------------|--------|
+| Top N | 8 | 4-5 | Fewer chunks to process |
+| Similarity Threshold | 0.2 | 0.3-0.4 | More selective retrieval |
+| Top K | 1024 | 512 | Reduce search space |
+
+### Profile Response Time
+
+Click the **light bulb icon** in RAGFlow chat to see time breakdown for each processing step.
+
+---
+
 ## Troubleshooting
 
 ### Image Pull Errors
