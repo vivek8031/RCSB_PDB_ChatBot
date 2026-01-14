@@ -128,7 +128,7 @@ config:
   GOOGLE_DRIVE_MAX_FILE_SIZE_MB: "100"
   GOOGLE_DRIVE_DOWNLOAD_TIMEOUT: "300"
   GOOGLE_DRIVE_ENABLE_NOTIFICATIONS: "false"
-  FEEDBACK_EXPORT_DIR: "/app/exports"
+  FEEDBACK_EXPORT_DIR: "/tmp/exports"
 
 # -- Secrets configuration (references pre-created secrets)
 secrets:
