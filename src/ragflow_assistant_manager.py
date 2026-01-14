@@ -41,7 +41,7 @@ class AssistantConfig:
     name: str
     dataset_name: str = "rcsb_pdb_knowledge_base"
     system_prompt: str = ""
-    model_name: str = "gpt-4.1"
+    model_name: str = "gpt-5-mini@OpenAI"
     temperature: float = 0.1
     top_p: float = 0.3
     presence_penalty: float = 0.2
@@ -210,6 +210,8 @@ class RAGFlowAssistantManager:
             dataset_id = self.get_or_create_dataset(config.dataset_name)
 
             # Prepare update payload with proper structure
+            # Note: LLM settings removed due to RAGFlow API bug (KeyError: 'model_type')
+            # LLM must be configured via RAGFlow UI instead
             update_data = {
                 "name": config.name,
                 "dataset_ids": [dataset_id],
@@ -512,7 +514,7 @@ You are an expert assistant helping researchers deposit structural data to the R
         name=os.getenv("RAGFLOW_ASSISTANT_NAME", "RCSB ChatBot v2"),
         dataset_name=os.getenv("RAGFLOW_DATASET_NAME", "rcsb_pdb_knowledge_base"),
         system_prompt=os.getenv("RAGFLOW_SYSTEM_PROMPT", default_prompt),
-        model_name=os.getenv("RAGFLOW_MODEL_NAME", "gpt-4.1"),
+        model_name=os.getenv("RAGFLOW_MODEL_NAME", "gpt-5-mini@OpenAI"),
         temperature=float(os.getenv("RAGFLOW_TEMPERATURE", "0.1")),
         top_p=float(os.getenv("RAGFLOW_TOP_P", "0.3")),
         presence_penalty=float(os.getenv("RAGFLOW_PRESENCE_PENALTY", "0.2")),
