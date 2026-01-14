@@ -11,19 +11,20 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict
 
-# Add parent directory to path for imports
+# Add parent directory to path for imports (works in both local and Docker)
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))  # For Docker where src/ is copied to /app
 
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.google_drive_sync.config import (
+from google_drive_sync.config import (
     SyncConfig,
     SyncResults,
     setup_logging,
 )
-from src.google_drive_sync.drive_client import GoogleDriveClient
+from google_drive_sync.drive_client import GoogleDriveClient
 
 
 class GoogleDriveSyncManager:
