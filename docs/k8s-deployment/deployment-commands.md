@@ -55,18 +55,37 @@ ragflow-redis-0            1/1     Running   0          Xm
 
 ---
 
-## Step 2: Access RAGFlow UI (Get API Key)
+## Step 2: Access RAGFlow UI and Configure
 
 ```bash
 # Port forward to RAGFlow UI
 kubectl port-forward svc/ragflow 8080:80 -n vivek-chithari &
 
 # Open browser: http://localhost:8080
-# 1. Register/Login (create account first time)
-# 2. Go to Settings → API Keys (or User Profile → API Keys)
-# 3. Generate new API key
-# 4. Copy the key (format: ragflow-xxxx...)
+```
 
+### 2.1 Register/Login
+1. Create an account (first time) or login
+2. Note your username for later
+
+### 2.2 Generate RAGFlow API Key
+1. Go to **User Profile** (top right) → **API Keys**
+2. Click **Generate new API key**
+3. Copy the key (format: `ragflow-xxxx...`)
+4. Save this for Step 3
+
+### 2.3 Configure OpenAI Model Provider (CRITICAL)
+This step is required for the knowledge base to work:
+
+1. Go to **User Profile** → **Model Providers** (or **Settings** → **Model Management**)
+2. Click **Add Model Provider**
+3. Select **OpenAI**
+4. Enter your **OpenAI API Key**
+5. Click **Save**
+
+**Note:** Without this step, the KB init job will fail with `Unauthorized model: text-embedding-3-large@OpenAI`
+
+```bash
 # Kill port forward when done
 pkill -f "port-forward svc/ragflow"
 ```
@@ -253,7 +272,7 @@ kubectl exec -it deploy/rcsb-pdb-chatbot -n vivek-chithari -- /bin/bash
 
 # Test RAGFlow connectivity from chatbot pod
 kubectl exec -it deploy/rcsb-pdb-chatbot -n vivek-chithari -- \
-  curl -s http://ragflow-ragflow:9380/health
+  curl -s http://ragflow-api/api/v1/datasets
 ```
 
 ---
