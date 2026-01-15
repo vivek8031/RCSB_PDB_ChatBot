@@ -123,7 +123,7 @@ class RAGFlowAssistantManager:
                 "delimiter": "\n",  # Actual newline character (not "\\n")
                 "html4excel": False,
                 "layout_recognize": "DeepDOC",
-                "raptor": {"use_raptor": True}
+                "raptor": {"use_raptor": False}
             }
 
             parser_config = DataSet.ParserConfig(self.ragflow_client, parser_config_dict)
@@ -377,21 +377,21 @@ class RAGFlowAssistantManager:
             print(f"⚠️  Health check failed: {e}")
 
         return health_status
-    
+
     def update_prompt(self, new_prompt: str) -> bool:
         """
         Update the system prompt for the current assistant
-        
+
         Args:
             new_prompt: New system prompt content
-            
+
         Returns:
             True if successful, False otherwise
         """
         if not self._current_assistant:
             print("❌ No current assistant available for prompt update")
             return False
-        
+
         try:
             # Get dataset ID for the current assistant's configuration
             dataset_id = None
@@ -400,7 +400,7 @@ class RAGFlowAssistantManager:
             else:
                 # Fallback: get default dataset
                 dataset_id = self.get_or_create_dataset("rcsb_pdb_knowledge_base")
-            
+
             # Prepare update payload with new prompt
             update_data = {
                 "prompt": {
@@ -409,12 +409,12 @@ class RAGFlowAssistantManager:
                     "show_quote": True
                 }
             }
-            
+
             # Update assistant prompt
             self._current_assistant.update(update_data)
             print(f"✅ Updated assistant prompt successfully")
             return True
-            
+
         except Exception as e:
             print(f"❌ Error updating assistant prompt: {e}")
             return False
@@ -450,7 +450,7 @@ You are an expert assistant helping researchers deposit structural data to the R
 - Focus on what depositors can DO, not internal processes
 - Remove any instructions meant for internal staff
 
-### 2. CONCISE RESPONSES WITHOUT REDUNDANCY  
+### 2. CONCISE RESPONSES WITHOUT REDUNDANCY
 - Provide DIRECT, actionable answers
 - NO redundant "Summary" or "Key Points" sections that repeat the main answer
 - NO excessive elaboration - keep responses focused and practical
@@ -469,7 +469,7 @@ You are an expert assistant helping researchers deposit structural data to the R
 
 ### 5. PRIORITIZE DIRECT SOLUTIONS
 - Lead with the MOST LIKELY solution first, not a list of possibilities
-- For complex issues, prioritize "contact support staff" early in response  
+- For complex issues, prioritize "contact support staff" early in response
 - Avoid burying correct answers in long bullet lists
 - Structure: Direct Solution → Alternative if needed → Contact support
 
@@ -493,7 +493,7 @@ You are an expert assistant helping researchers deposit structural data to the R
 ```
 
 ## FORBIDDEN CONTENT:
-❌ Biocurator terminology: "annotator", "allow submit", "RT", "triage", "Ezra", "Notes for annotators"  
+❌ Biocurator terminology: "annotator", "allow submit", "RT", "triage", "Ezra", "Notes for annotators"
 ❌ Raw reference IDs: [ID:X], "Available reference IDs:", "References: [ID:0]"
 ❌ Redundant summaries that repeat the main answer
 ❌ Internal process details not relevant to depositors
@@ -504,7 +504,7 @@ You are an expert assistant helping researchers deposit structural data to the R
 ## REQUIRED APPROACH:
 ✅ Use only depositor-friendly, external-facing language
 ✅ Provide concise, actionable guidance without redundancy
-✅ Clean reference formatting appropriate for external users  
+✅ Clean reference formatting appropriate for external users
 ✅ Focus exclusively on depositor needs and procedures
 ✅ Lead with the most likely/direct solution first
 ✅ Provide step-by-step instructions rather than policy theory
@@ -521,8 +521,8 @@ You are an expert assistant helping researchers deposit structural data to the R
         frequency_penalty=float(os.getenv("RAGFLOW_FREQUENCY_PENALTY", "0.7")),
         similarity_threshold=float(os.getenv("RAGFLOW_SIMILARITY_THRESHOLD", "0.2")),
         keywords_similarity_weight=float(os.getenv("RAGFLOW_KEYWORDS_WEIGHT", "0.7")),
-        top_n=int(os.getenv("RAGFLOW_TOP_N", "8")),
-        top_k=int(os.getenv("RAGFLOW_TOP_K", "1024")),
+        top_n=int(os.getenv("RAGFLOW_TOP_N", "3")),
+        top_k=int(os.getenv("RAGFLOW_TOP_K", "256")),
         opener=os.getenv("RAGFLOW_OPENER", "Hi! I'm your RCSB PDB assistant. I can help you with protein structures, crystallography, and structural biology questions. What would you like to know?"),
         show_quote=os.getenv("RAGFLOW_SHOW_QUOTE", "true").lower() == "true"
     )
