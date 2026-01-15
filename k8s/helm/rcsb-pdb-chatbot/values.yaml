@@ -84,7 +84,8 @@ persistence:
     mountPath: /app/user_data
 
   credentials:
-    enabled: true
+    # Disabled - using gdrive-credentials secret instead
+    enabled: false
     storageClass: csi-cephfs-sc
     accessMode: ReadWriteOnce
     size: 100Mi
