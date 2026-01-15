@@ -93,14 +93,26 @@ create_secrets() {
 
     # Google Drive credentials
     CREDS_DIR="${SCRIPT_DIR}/../credentials"
-    if [ -f "${CREDS_DIR}/google_drive_credentials.json" ]; then
+    GDRIVE_CREDS="${CREDS_DIR}/google_drive_credentials.json"
+    GDRIVE_TOKEN="${CREDS_DIR}/google_drive_token.pickle"
+
+    if [ -f "$GDRIVE_CREDS" ] && [ -f "$GDRIVE_TOKEN" ]; then
         kubectl create secret generic gdrive-credentials \
-            --from-file=credentials.json="${CREDS_DIR}/google_drive_credentials.json" \
-            --from-file=token.pickle="${CREDS_DIR}/google_drive_token.pickle" \
-            -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
-        print_status "Google Drive credentials secret created"
+            --from-file=credentials.json="$GDRIVE_CREDS" \
+            --from-file=token.pickle="$GDRIVE_TOKEN" \
+            -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+        print_status "Google Drive credentials secret created (with OAuth token)"
+    elif [ -f "$GDRIVE_CREDS" ]; then
+        # Only credentials file exists - token needs to be generated
+        kubectl create secret generic gdrive-credentials \
+            --from-file=credentials.json="$GDRIVE_CREDS" \
+            -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+        print_warning "Google Drive credentials created WITHOUT OAuth token"
+        print_warning "Run OAuth flow locally to generate token.pickle:"
+        print_warning "  python -c \"from src.google_drive_sync.drive_client import GoogleDriveClient; GoogleDriveClient()\""
     else
-        print_warning "Google Drive credentials not found. Skipping."
+        print_warning "Google Drive credentials not found at: $GDRIVE_CREDS"
+        print_warning "Skipping gdrive-credentials secret. CronJobs will fail without this."
     fi
 }
 
@@ -216,13 +228,22 @@ main() {
             echo "  verify   - Verify deployment status"
             echo ""
             echo "Environment variables:"
-            echo "  NAMESPACE          - K8s namespace (default: vivek.chithari)"
+            echo "  NAMESPACE          - K8s namespace (default: vivek-chithari)"
             echo "  HARBOR_PROJECT     - Harbor project name"
             echo "  IMAGE_TAG          - Image tag (default: 1.0.0)"
             echo "  HARBOR_USERNAME    - Harbor OIDC username"
             echo "  HARBOR_PASSWORD    - Harbor CLI secret"
             echo "  RAGFLOW_API_KEY    - RAGFlow API key"
             echo "  OPENAI_API_KEY     - OpenAI API key"
+            echo "  GOOGLE_DRIVE_FOLDER_URL       - Google Drive folder URL for knowledge base sync"
+            echo "  GOOGLE_DRIVE_EXPORT_FOLDER_ID - Google Drive folder ID for feedback exports"
+            echo ""
+            echo "Google Drive credentials (required for cronjobs):"
+            echo "  credentials/google_drive_credentials.json - OAuth client credentials"
+            echo "  credentials/google_drive_token.pickle     - OAuth token (run OAuth flow locally)"
+            echo ""
+            echo "To generate OAuth token:"
+            echo "  python -c \"from src.google_drive_sync.drive_client import GoogleDriveClient; GoogleDriveClient()\""
             exit 1
             ;;
     esac
