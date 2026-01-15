@@ -153,15 +153,12 @@ def display_header():
     </style>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 5, 1])
+    col1, col2 = st.columns([6, 1])
 
     with col1:
         st.markdown("### RCSB PDB")
 
     with col2:
-        st.markdown("## Help Desk")
-
-    with col3:
         if st.button("New Chat", type="primary", use_container_width=True, help="Start a new conversation"):
             start_new_chat()
             st.rerun()
@@ -244,7 +241,7 @@ def display_chat_interface():
     # Display welcome message if no messages yet
     if not st.session_state.messages:
         st.markdown("""
-        ### Welcome to the RCSB PDB Help Desk
+        ### Welcome to RCSB PDB
 
         Ask me anything about:
         - **Protein Data Bank (PDB)** structures and entries
@@ -376,7 +373,7 @@ def main():
     """Main application function - Anonymous Help Desk"""
     # Page configuration
     st.set_page_config(
-        page_title="RCSB PDB Help Desk",
+        page_title="RCSB PDB",
         page_icon="",
         layout="wide",
         initial_sidebar_state="collapsed"
