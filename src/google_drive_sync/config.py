@@ -280,8 +280,18 @@ def setup_logging(log_level: str = "INFO", log_to_file: bool = True) -> logging.
 
     # File handler - rotating logs (10MB max, keep 5 backups)
     if log_to_file:
-        log_file = Path("logs/google_drive_sync.log")
-        log_file.parent.mkdir(exist_ok=True)
+        try:
+            # Try /tmp first (works in K8s containers), fallback to local logs/
+            log_file = Path("/tmp/logs/google_drive_sync.log")
+            log_file.parent.mkdir(exist_ok=True)
+        except PermissionError:
+            try:
+                log_file = Path("logs/google_drive_sync.log")
+                log_file.parent.mkdir(exist_ok=True)
+            except PermissionError:
+                # Skip file logging if we can't write anywhere
+                logger.warning("Cannot create log directory, skipping file logging")
+                return logger
 
         file_handler = RotatingFileHandler(
             log_file,

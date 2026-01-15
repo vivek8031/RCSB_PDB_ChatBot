@@ -158,17 +158,23 @@ class ConversationExtractor:
                 self.logger.warning("Skipping Q&A pair with missing essential data")
                 return None
 
-            # Extract feedback (if present)
+            # Extract feedback (if present) - supports both new and legacy formats
             feedback = assistant_msg.get("feedback")
-            feedback_rating = None
-            feedback_categories = []
-            feedback_comment = None
+            star_rating = None
             feedback_timestamp = None
 
             if feedback and isinstance(feedback, dict):
-                feedback_rating = feedback.get("rating")
-                feedback_categories = feedback.get("categories", [])
-                feedback_comment = feedback.get("comment")
+                # New format: star_rating (1-5)
+                if "star_rating" in feedback:
+                    star_rating = feedback.get("star_rating")
+                # Legacy format: thumbs-up/thumbs-down - convert to star rating
+                elif "rating" in feedback:
+                    legacy_rating = feedback.get("rating")
+                    if legacy_rating == "thumbs-up":
+                        star_rating = 5  # Convert positive to 5 stars
+                    elif legacy_rating == "thumbs-down":
+                        star_rating = 2  # Convert negative to 2 stars
+
                 feedback_timestamp = feedback.get("feedback_timestamp")
 
             # Extract referenced documents
@@ -196,9 +202,7 @@ class ConversationExtractor:
                 user_question=user_question,
                 answer_timestamp=answer_timestamp,
                 ai_response=ai_response,
-                feedback_rating=feedback_rating,
-                feedback_categories=feedback_categories,
-                feedback_comment=feedback_comment,
+                star_rating=star_rating,
                 feedback_timestamp=feedback_timestamp,
                 referenced_documents=referenced_documents
             )

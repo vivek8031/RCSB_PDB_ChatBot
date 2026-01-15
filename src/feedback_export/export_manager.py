@@ -10,20 +10,21 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
-# Add parent directory to path for imports
+# Add parent directory to path for imports (works in both local and Docker)
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))  # For Docker where src/ is copied to /app
 
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.feedback_export.config import (
+from feedback_export.config import (
     ExportConfig,
     ExportResults,
     setup_logging
 )
-from src.feedback_export.conversation_extractor import ConversationExtractor
-from src.feedback_export.csv_exporter import CSVExporter
+from feedback_export.conversation_extractor import ConversationExtractor
+from feedback_export.csv_exporter import CSVExporter
 
 
 class FeedbackExportManager:

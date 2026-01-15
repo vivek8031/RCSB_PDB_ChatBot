@@ -1,0 +1,59 @@
+{{- if .Values.kbInit.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "rcsb-pdb-chatbot.fullname" . }}-kb-init
+  labels:
+    {{- include "rcsb-pdb-chatbot.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "rcsb-pdb-chatbot.selectorLabels" . | nindent 8 }}
+        job: kb-init
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "rcsb-pdb-chatbot.serviceAccountName" . }}
+      restartPolicy: OnFailure
+      containers:
+        - name: kb-init
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: {{ toYaml .Values.kbInit.command | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "rcsb-pdb-chatbot.configMapName" . }}
+          env:
+            - name: RAGFLOW_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: {{ .Values.secrets.keys.ragflowApiKey }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: {{ .Values.secrets.keys.openaiApiKey }}
+          volumeMounts:
+            {{- if .Values.persistence.knowledgeBase.enabled }}
+            - name: knowledge-base
+              mountPath: {{ .Values.persistence.knowledgeBase.mountPath }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.kbInit.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.persistence.knowledgeBase.enabled }}
+        - name: knowledge-base
+          persistentVolumeClaim:
+            claimName: {{ include "rcsb-pdb-chatbot.pvcKnowledgeBase" . }}
+        {{- end }}
+{{- end }}

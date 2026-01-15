@@ -111,10 +111,8 @@ class QAPair:
     answer_timestamp: str
     ai_response: str
 
-    # Feedback (optional)
-    feedback_rating: Optional[str] = None  # "thumbs-up" or "thumbs-down"
-    feedback_categories: List[str] = field(default_factory=list)
-    feedback_comment: Optional[str] = None
+    # Feedback (optional) - simplified to star rating
+    star_rating: Optional[int] = None  # 1-5 stars
     feedback_timestamp: Optional[str] = None
 
     # References
@@ -131,22 +129,16 @@ class QAPair:
             self.answer_timestamp,
             self.ai_response,
             self._format_rating(),
-            ", ".join(self.feedback_categories) if self.feedback_categories else "",
-            self.feedback_comment or "",
             self.feedback_timestamp or "",
             ", ".join(self.referenced_documents) if self.referenced_documents else "",
             self.message_id  # Hidden column for deduplication
         ]
 
     def _format_rating(self) -> str:
-        """Format rating for spreadsheet display"""
-        if not self.feedback_rating:
+        """Format star rating for spreadsheet display"""
+        if not self.star_rating:
             return ""
-        if self.feedback_rating == "thumbs-up":
-            return "👍 Positive"
-        elif self.feedback_rating == "thumbs-down":
-            return "👎 Negative"
-        return self.feedback_rating
+        return f"{self.star_rating}/5 stars"
 
 
 @dataclass
@@ -217,9 +209,7 @@ SPREADSHEET_HEADERS = [
     "User Question",
     "Answer Timestamp",
     "AI Response",
-    "Feedback Rating",
-    "Feedback Categories",
-    "Feedback Comment",
+    "Star Rating",
     "Feedback Timestamp",
     "Referenced Documents",
     "Message ID"  # Hidden column

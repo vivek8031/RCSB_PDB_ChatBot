@@ -1,0 +1,79 @@
+{{- if .Values.cronJobs.googleDriveSync.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "rcsb-pdb-chatbot.fullname" . }}-gdrive-sync
+  labels:
+    {{- include "rcsb-pdb-chatbot.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronJobs.googleDriveSync.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "rcsb-pdb-chatbot.selectorLabels" . | nindent 12 }}
+            cronjob: gdrive-sync
+        spec:
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "rcsb-pdb-chatbot.serviceAccountName" . }}
+          restartPolicy: OnFailure
+          containers:
+            - name: gdrive-sync
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: {{ toYaml .Values.cronJobs.googleDriveSync.command | nindent 16 }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "rcsb-pdb-chatbot.configMapName" . }}
+              env:
+                - name: RAGFLOW_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.name }}
+                      key: {{ .Values.secrets.keys.ragflowApiKey }}
+                - name: OPENAI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.name }}
+                      key: {{ .Values.secrets.keys.openaiApiKey }}
+                - name: GOOGLE_DRIVE_FOLDER_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.name }}
+                      key: {{ .Values.secrets.keys.googleDriveFolderUrl }}
+                      optional: true
+              volumeMounts:
+                {{- if .Values.persistence.knowledgeBase.enabled }}
+                - name: knowledge-base
+                  mountPath: {{ .Values.persistence.knowledgeBase.mountPath }}
+                {{- end }}
+                - name: gdrive-creds
+                  mountPath: /app/credentials/google_drive_credentials.json
+                  subPath: {{ .Values.googleDriveCredentials.credentialsKey }}
+                  readOnly: true
+                - name: gdrive-creds
+                  mountPath: /app/credentials/google_drive_token.pickle
+                  subPath: {{ .Values.googleDriveCredentials.tokenKey }}
+                  readOnly: true
+              resources:
+                {{- toYaml .Values.cronJobs.googleDriveSync.resources | nindent 16 }}
+          volumes:
+            {{- if .Values.persistence.knowledgeBase.enabled }}
+            - name: knowledge-base
+              persistentVolumeClaim:
+                claimName: {{ include "rcsb-pdb-chatbot.pvcKnowledgeBase" . }}
+            {{- end }}
+            - name: gdrive-creds
+              secret:
+                secretName: {{ .Values.googleDriveCredentials.secretName }}
+                optional: true
+{{- end }}

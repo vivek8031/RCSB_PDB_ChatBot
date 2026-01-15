@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rcsb-pdb-chatbot.fullname" . }}
+  labels:
+    {{- include "rcsb-pdb-chatbot.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rcsb-pdb-chatbot.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rcsb-pdb-chatbot.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "rcsb-pdb-chatbot.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "rcsb-pdb-chatbot.configMapName" . }}
+          env:
+            # Secrets from chatbot-secrets
+            - name: RAGFLOW_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: {{ .Values.secrets.keys.ragflowApiKey }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: {{ .Values.secrets.keys.openaiApiKey }}
+            - name: GOOGLE_DRIVE_FOLDER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: {{ .Values.secrets.keys.googleDriveFolderUrl }}
+                  optional: true
+            - name: GOOGLE_DRIVE_EXPORT_FOLDER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: {{ .Values.secrets.keys.googleDriveExportFolderId }}
+                  optional: true
+          volumeMounts:
+            {{- if .Values.persistence.userData.enabled }}
+            - name: user-data
+              mountPath: {{ .Values.persistence.userData.mountPath }}
+            {{- end }}
+            {{- if .Values.persistence.credentials.enabled }}
+            - name: credentials
+              mountPath: {{ .Values.persistence.credentials.mountPath }}
+            {{- end }}
+            {{- if .Values.persistence.knowledgeBase.enabled }}
+            - name: knowledge-base
+              mountPath: {{ .Values.persistence.knowledgeBase.mountPath }}
+            {{- end }}
+            # Mount Google Drive credentials from secret
+            - name: gdrive-creds
+              mountPath: /app/credentials/google_drive_credentials.json
+              subPath: {{ .Values.googleDriveCredentials.credentialsKey }}
+              readOnly: true
+            - name: gdrive-creds
+              mountPath: /app/credentials/google_drive_token.pickle
+              subPath: {{ .Values.googleDriveCredentials.tokenKey }}
+              readOnly: true
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.persistence.userData.enabled }}
+        - name: user-data
+          persistentVolumeClaim:
+            claimName: {{ include "rcsb-pdb-chatbot.pvcUserData" . }}
+        {{- end }}
+        {{- if .Values.persistence.credentials.enabled }}
+        - name: credentials
+          persistentVolumeClaim:
+            claimName: {{ include "rcsb-pdb-chatbot.pvcCredentials" . }}
+        {{- end }}
+        {{- if .Values.persistence.knowledgeBase.enabled }}
+        - name: knowledge-base
+          persistentVolumeClaim:
+            claimName: {{ include "rcsb-pdb-chatbot.pvcKnowledgeBase" . }}
+        {{- end }}
+        - name: gdrive-creds
+          secret:
+            secretName: {{ .Values.googleDriveCredentials.secretName }}
+            optional: true
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
