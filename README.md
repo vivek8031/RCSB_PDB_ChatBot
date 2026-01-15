@@ -1,12 +1,12 @@
 # 🧬 RCSB PDB ChatBot
 
-An intelligent, multi-user research assistant for protein structures and structural biology powered by RAGFlow.
+An intelligent help desk chatbot for protein structures and structural biology powered by RAGFlow.
 
 ## ✨ Features
 
-- **Multi-User Support** - Isolated research sessions for multiple users
+- **Anonymous Sessions** - No login required, auto-generated session IDs
 - **Conversation Persistence** - All chats saved with complete history
-- **Multi-Chat Organization** - Organize research by topic in separate chats
+- **Star Ratings** - 1-5 star feedback on each response
 - **RAGFlow Integration** - Advanced AI responses with document references
 - **Docker Deployment** - Production-ready containerized setup
 
@@ -258,11 +258,10 @@ Export user conversations, feedback, and ratings to Google Sheets for analysis.
 
 **What Gets Exported:**
 - User questions and AI responses (Q&A pairs)
-- Feedback ratings (👍 thumbs-up / 👎 thumbs-down)
-- Feedback categories and comments
+- Star ratings (1-5 stars on each response)
 - Referenced documents used by AI
 - Timestamps for all interactions
-- Organized by user and chat title
+- Organized by session and chat title
 
 **Initial Setup:**
 
@@ -313,15 +312,13 @@ Each row represents one Q&A interaction:
 | Column | Description |
 |--------|-------------|
 | Export ID | Unique identifier for this Q&A pair |
-| User ID | Which user asked the question |
+| User ID | Session ID (UUID) |
 | Chat Title | Topic/title of the conversation |
 | Question Timestamp | When the question was asked |
 | User Question | The user's question text |
 | Answer Timestamp | When AI responded |
 | AI Response | The AI's answer text |
-| Feedback Rating | 👍 Positive or 👎 Negative (if provided) |
-| Feedback Categories | Tags like "incorrect", "incomplete" (if provided) |
-| Feedback Comment | User's written feedback (if provided) |
+| Star Rating | 1-5 star rating (if provided) |
 | Feedback Timestamp | When feedback was given |
 | Referenced Documents | Which knowledge base documents AI used |
 
@@ -426,23 +423,23 @@ USER_DATA_DIR=./user_data   # Session data location
 
 ## 📱 Usage
 
-1. **Start Research Session**: Login with your research ID (e.g., "alice", "researcher_123")
-2. **Create Chats**: Organize different research topics in separate conversations
-3. **Ask Questions**: Query about RCSB PDB, protein structures, crystallography
-4. **Manage Sessions**: Switch between chats, export conversations, clear history
+1. **Open the App**: Session is created automatically (no login required)
+2. **Ask Questions**: Query about RCSB PDB, protein structures, crystallography
+3. **Rate Responses**: Click stars (1-5) to rate each AI response
+4. **New Chat**: Click "New Chat" button to start a fresh conversation
 
-## 🧪 Multi-User Model
+## 🧪 Session Model
 
 ```
-Researcher "alice"              Researcher "bob"
-├── Chat: "Protein Research"    ├── Chat: "NMR Studies"
-├── Chat: "Data Analysis"       └── Chat: "Crystallography"
-└── Chat: "PDB Questions"
+Anonymous Session (UUID-based)
+├── Auto-generated session ID in URL (?sid=...)
+├── Chat: "Help Session 2026-01-14 10:30"
+└── All data persisted for admin review
 ```
 
-- **Complete Isolation**: Users cannot access each other's data
-- **Private Workspaces**: Individual session storage
-- **Secure Authentication**: Session validation and ownership checks
+- **No Login Required**: Sessions auto-created on first visit
+- **Session Isolation**: Each browser gets unique session ID
+- **Data Persistence**: All chats saved for admin purposes
 
 ## 🛠️ Development
 
@@ -465,11 +462,11 @@ docker-compose up -d
 
 ## 🔒 Security
 
-- ✅ Complete user session isolation
-- ✅ No cross-user data access
-- ✅ Private conversation storage
-- ✅ Session hijacking prevention
-- ✅ Production-ready security practices
+- ✅ Session-based data isolation (UUID per browser)
+- ✅ All conversations persisted securely
+- ✅ No authentication required (anonymous help desk)
+- ✅ Data accessible to admins for quality review
+- ✅ Production-ready containerized deployment
 
 ## 📚 Documentation
 

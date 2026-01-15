@@ -471,3 +471,118 @@ helm upgrade rcsb-pdb-chatbot k8s/helm/rcsb-pdb-chatbot \
   --set image.tag=1.0.1 \
   --wait
 ```
+
+---
+
+## Complete Workflow: Making and Applying Changes
+
+This section covers the full workflow for making code changes and deploying them.
+
+### Step 1: Make Code Changes
+
+Edit the relevant files:
+- **UI changes**: `src/rcsb_pdb_chatbot.py`
+- **Session management**: `src/user_session_manager.py`
+- **RAGFlow settings**: `src/ragflow_assistant_manager.py`
+- **K8s config**: `k8s/helm/rcsb-pdb-chatbot/values.yaml`
+- **Feedback export**: `src/feedback_export/*.py`
+
+### Step 2: Commit Changes
+
+```bash
+git add <files>
+git commit -m "Description of changes"
+git push origin <branch>
+```
+
+### Step 3: Build and Push Docker Image
+
+```bash
+# Login to Harbor (if needed)
+docker login harbor.devops.k8s.rcsb.org
+
+# Build for AMD64 and push
+docker buildx build --platform linux/amd64 \
+  -t harbor.devops.k8s.rcsb.org/vivek.chithari/rcsb-pdb-chatbot:latest \
+  --push .
+```
+
+### Step 4: Apply Changes to K8s
+
+**For code-only changes (UI, Python logic):**
+```bash
+kubectl rollout restart deploy/rcsb-pdb-chatbot -n vivek-chithari
+kubectl rollout status deploy/rcsb-pdb-chatbot -n vivek-chithari
+```
+
+**For values.yaml config changes:**
+```bash
+helm upgrade rcsb-pdb-chatbot k8s/helm/rcsb-pdb-chatbot -n vivek-chithari --wait
+kubectl rollout restart deploy/rcsb-pdb-chatbot -n vivek-chithari
+```
+
+**For RAGFlow assistant settings (top_n, top_k, temperature, etc.):**
+```bash
+# Delete KB init job first, then upgrade
+kubectl delete job rcsb-pdb-chatbot-kb-init -n vivek-chithari
+helm upgrade rcsb-pdb-chatbot k8s/helm/rcsb-pdb-chatbot -n vivek-chithari --wait
+
+# Verify KB init completed
+kubectl logs job/rcsb-pdb-chatbot-kb-init -n vivek-chithari
+```
+
+### Step 5: Verify Deployment
+
+```bash
+# Check pod is running
+kubectl get pods -n vivek-chithari -l app.kubernetes.io/name=rcsb-pdb-chatbot
+
+# Check logs for errors
+kubectl logs -f deploy/rcsb-pdb-chatbot -n vivek-chithari
+
+# Test health endpoint
+curl https://pdb-chatbot.k8s.rcsb.org/_stcore/health
+```
+
+### Quick Reference: What Requires What
+
+| Change Type | Build Image | Helm Upgrade | Delete KB Job | Restart Deploy |
+|-------------|-------------|--------------|---------------|----------------|
+| UI/Python code | Yes | No | No | Yes |
+| values.yaml (non-RAGFlow) | No | Yes | No | Yes |
+| RAGFlow settings | No | Yes | Yes | No (auto) |
+| Helm templates | No | Yes | No | Yes |
+
+---
+
+## Updating RAGFlow Assistant Settings
+
+RAGFlow assistant settings (top_n, top_k, temperature, etc.) are stored in RAGFlow's database when the assistant is created. To update these settings after changing `values.yaml`:
+
+```bash
+# 1. Update values.yaml with new settings (e.g., RAGFLOW_TOP_N, RAGFLOW_TOP_K)
+
+# 2. Delete the existing KB init job
+kubectl delete job rcsb-pdb-chatbot-kb-init -n vivek-chithari
+
+# 3. Upgrade Helm release - this recreates the KB init job
+helm upgrade rcsb-pdb-chatbot k8s/helm/rcsb-pdb-chatbot -n vivek-chithari --wait
+
+# 4. Verify the KB init job completed successfully
+kubectl get jobs -n vivek-chithari | grep kb-init
+kubectl logs job/rcsb-pdb-chatbot-kb-init -n vivek-chithari
+```
+
+**Why is this needed?**
+- The chatbot ConfigMap gets updated immediately with `helm upgrade`
+- But the RAGFlow assistant settings are stored in RAGFlow's database
+- The KB init job is what creates/updates the assistant with settings from environment variables
+- Deleting and recreating the job forces it to re-apply the new settings
+
+**Settings that require this process:**
+- `RAGFLOW_TOP_N` - Number of chunks sent to LLM
+- `RAGFLOW_TOP_K` - Number of chunks retrieved from vector DB
+- `RAGFLOW_TEMPERATURE` - LLM temperature
+- `RAGFLOW_SIMILARITY_THRESHOLD` - Minimum similarity score
+- `RAGFLOW_KEYWORDS_WEIGHT` - Keyword vs vector weight
+- Any other `RAGFLOW_*` settings in values.yaml
