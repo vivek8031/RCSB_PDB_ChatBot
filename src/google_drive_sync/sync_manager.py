@@ -5,6 +5,7 @@ Google Drive Sync Manager - Simplified
 Downloads all files from a Google Drive folder directly to knowledge base.
 """
 
+import os
 import sys
 import subprocess
 from pathlib import Path
