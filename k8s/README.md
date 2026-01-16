@@ -1,63 +1,61 @@
-# Kubernetes & Helm Deployment Documentation
+# Kubernetes & Helm Deployment
 
-This directory contains all Kubernetes and Helm deployment configurations for the RCSB PDB Chatbot application.
+This directory contains Kubernetes and Helm deployment configurations for the RCSB PDB Chatbot application.
 
 ---
 
-## Files to Share with DevOps Team
-
-### 1. Helm Chart (Primary - Share First)
+## Helm Chart
 
 | File | Purpose |
 |------|---------|
-| `k8s/helm/rcsb-pdb-chatbot/Chart.yaml` | Chart metadata (name, version, maintainer) |
-| `k8s/helm/rcsb-pdb-chatbot/values.yaml` | **Main configuration** - replicas, resources, ingress, storage, RAGFlow settings |
-| `k8s/helm/rcsb-pdb-chatbot/ragflow-values.yaml` | RAGFlow subchart overrides |
+| `helm/rcsb-pdb-chatbot/Chart.yaml` | Chart metadata (name, version, maintainer) |
+| `helm/rcsb-pdb-chatbot/values.yaml` | Main configuration - replicas, resources, ingress, storage, RAGFlow settings |
+| `helm/rcsb-pdb-chatbot/ragflow-values.yaml` | RAGFlow subchart overrides |
 
-### 2. Kubernetes Templates
+## Kubernetes Templates
 
 **Core Resources:**
 
 | File | Type | Purpose |
 |------|------|---------|
-| `k8s/helm/rcsb-pdb-chatbot/templates/deployment.yaml` | Deployment | Main app pod with security context, probes, volumes |
-| `k8s/helm/rcsb-pdb-chatbot/templates/service.yaml` | Service | ClusterIP on port 8501 |
-| `k8s/helm/rcsb-pdb-chatbot/templates/ingress.yaml` | Ingress | HAProxy with TLS at `pdb-chatbot.k8s.rcsb.org` |
-| `k8s/helm/rcsb-pdb-chatbot/templates/serviceaccount.yaml` | ServiceAccount | RBAC identity |
+| `helm/rcsb-pdb-chatbot/templates/deployment.yaml` | Deployment | Main app pod with security context, probes, volumes |
+| `helm/rcsb-pdb-chatbot/templates/service.yaml` | Service | ClusterIP on port 8501 |
+| `helm/rcsb-pdb-chatbot/templates/ingress.yaml` | Ingress | HAProxy with TLS at `pdb-chatbot.k8s.rcsb.org` |
+| `helm/rcsb-pdb-chatbot/templates/serviceaccount.yaml` | ServiceAccount | RBAC identity |
 
 **Storage:**
 
 | File | Type | Size |
 |------|------|------|
-| `k8s/helm/rcsb-pdb-chatbot/templates/pvc-user-data.yaml` | PVC | 10Gi (user sessions) |
-| `k8s/helm/rcsb-pdb-chatbot/templates/pvc-knowledge-base.yaml` | PVC | 20Gi (RAGFlow docs) |
-| `k8s/helm/rcsb-pdb-chatbot/templates/pvc-credentials.yaml` | PVC | 100Mi (disabled) |
+| `helm/rcsb-pdb-chatbot/templates/pvc-user-data.yaml` | PVC | 10Gi (user sessions) |
+| `helm/rcsb-pdb-chatbot/templates/pvc-knowledge-base.yaml` | PVC | 20Gi (RAGFlow docs) |
+| `helm/rcsb-pdb-chatbot/templates/pvc-credentials.yaml` | PVC | 100Mi (disabled) |
 
 **Configuration:**
 
 | File | Type |
 |------|------|
-| `k8s/helm/rcsb-pdb-chatbot/templates/configmap.yaml` | ConfigMap |
+| `helm/rcsb-pdb-chatbot/templates/configmap.yaml` | ConfigMap |
 
 **Jobs/CronJobs:**
 
 | File | Schedule | Purpose |
 |------|----------|---------|
-| `k8s/helm/rcsb-pdb-chatbot/templates/job-kb-init.yaml` | Post-install hook | Initialize RAGFlow KB |
-| `k8s/helm/rcsb-pdb-chatbot/templates/cronjob-gdrive-sync.yaml` | Every 6 hours | Sync Google Drive |
-| `k8s/helm/rcsb-pdb-chatbot/templates/cronjob-feedback-export.yaml` | Weekly Sunday | Export feedback |
+| `helm/rcsb-pdb-chatbot/templates/job-kb-init.yaml` | Post-install hook | Initialize RAGFlow KB |
+| `helm/rcsb-pdb-chatbot/templates/cronjob-gdrive-sync.yaml` | Every 6 hours | Sync Google Drive |
+| `helm/rcsb-pdb-chatbot/templates/cronjob-feedback-export.yaml` | Weekly Sunday | Export feedback |
 
-### 3. Container & Deployment Scripts
+## Container & Deployment Scripts
 
 | File | Purpose |
 |------|---------|
-| `Dockerfile` | Multi-stage build (python:3.10-slim) |
-| `docker-compose.yml` | Local development |
-| `k8s/deploy.sh` | Deployment automation script |
+| `../Dockerfile` | Multi-stage build (python:3.10-slim) |
+| `../docker-compose.yml` | Local development |
+| `deploy.sh` | Deployment automation script |
 
 ---
 
-## Key Infrastructure Details
+## Infrastructure Details
 
 | Component | Value |
 |-----------|-------|
@@ -108,7 +106,6 @@ kubectl logs -f deployment/rcsb-pdb-chatbot -n vivek-chithari
 ### Using the Deploy Script
 
 ```bash
-# Run the deployment script
 ./k8s/deploy.sh
 ```
 
@@ -127,20 +124,7 @@ helm list -n vivek-chithari
 
 ---
 
-## Quick Share Command
-
-```bash
-# List all files for DevOps review
-find k8s/ -type f \( -name "*.yaml" -o -name "*.sh" \) | sort
-
-# Or share the whole k8s/ directory
-```
-
----
-
-## File Summary
-
-**Total: 16 K8s/Helm files + Dockerfile + docker-compose.yml**
+## Directory Structure
 
 ```
 k8s/
